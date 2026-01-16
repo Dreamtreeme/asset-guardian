@@ -196,13 +196,28 @@ class LLMService:
                     json_str,
                     flags=re.DOTALL
                 )
-                # report_markdown 필드의 줄바꿈을 \\n으로 이스케이프
-                json_str = re.sub(
-                    r'("report_markdown"\s*:\s*")(.*?)("(?=\s*\}))',
-                    lambda m: m.group(1) + m.group(2).replace('\n', '\\n').replace('\r', '') + m.group(3),
-                    json_str,
-                    flags=re.DOTALL
-                )
+                
+                # report_markdown 필드 처리: 마지막 필드이므로 특별 처리
+                # "report_markdown": "..." 부분을 찾아서 줄바꿈을 \\n으로 변환
+                if '"report_markdown"' in json_str:
+                    # report_markdown 시작 위치 찾기
+                    start_marker = '"report_markdown"'
+                    start_idx = json_str.find(start_marker)
+                    if start_idx != -1:
+                        # 첫 번째 " 찾기 (값의 시작)
+                        value_start = json_str.find('"', start_idx + len(start_marker) + 1)
+                        # 마지막 } 찾기
+                        closing_brace = json_str.rfind('}')
+                        # 마지막 " 찾기 (값의 끝, } 바로 앞)
+                        value_end = json_str.rfind('"', value_start + 1, closing_brace)
+                        
+                        if value_start != -1 and value_end != -1:
+                            # report_markdown 값 추출
+                            report_value = json_str[value_start + 1:value_end]
+                            # 줄바꿈을 \\n으로 이스케이프
+                            escaped_value = report_value.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '')
+                            # 원본 교체
+                            json_str = json_str[:value_start + 1] + escaped_value + json_str[value_end:]
                 
                 print(f"[DEBUG] 정리된 JSON (first 500 chars): {json_str[:500]}")
                 
