@@ -134,8 +134,8 @@ async def get_analysis(
     if hasattr(td, 'px_10y') and not td.px_10y.empty:
         import numpy as np
         daily_returns = td.px_10y["Close"].pct_change().dropna()
-        var_5_pct = float(daily_returns.quantile(0.05) * 100) if len(daily_returns) > 0 else 0
-        volatility = float(daily_returns.std() * np.sqrt(252) * 100) if len(daily_returns) > 0 else 0
+        var_5_pct = float(daily_returns.quantile(0.05)) if len(daily_returns) > 0 else 0
+        volatility = float(daily_returns.std() * np.sqrt(252)) if len(daily_returns) > 0 else 0
     else:
         var_5_pct = 0
         volatility = 0
@@ -146,21 +146,15 @@ async def get_analysis(
         "symbol": symbol,
         "company_name": company_name,
         "long_term": {
-            "fundamental_trend": long_evidence.get("판정", "N/A"),
-            "revenue_slope": long_trends.get("매출", {}).get("기울기"),
-            "peg_ratio": long_valuation.get("trailingPEG", 0),
-            "roe": long_valuation.get("ROE", 0),
-            "current_ratio": long_valuation.get("currentRatio", 0),
-            "valuation_status": long_res.get("outlook", "N/A"),
-            "message": f"재무 판정: {long_evidence.get('판정', 'N/A')}, {long_res.get('outlook', 'N/A')}",
-            
             # 차트용 재무 추세 데이터
             "financial_trends": long_trends,
             
             # 차트용 가격 데이터 (최근 1년)
             "price_history": {
                 "dates": [str(d) for d in td.px_10y.index[-252:].tolist()],
-                "close": td.px_10y["Close"].iloc[-252:].tolist()
+                "close": td.px_10y["Close"].iloc[-252:].tolist(),
+                "ma200": td.px_10y["Close"].rolling(window=200).mean().iloc[-252:].tolist(),
+                "ma300": td.px_10y["Close"].rolling(window=300).mean().iloc[-252:].tolist()
             } if hasattr(td, 'px_10y') and not td.px_10y.empty else {},
             
             # 리스크 지표
@@ -170,23 +164,16 @@ async def get_analysis(
                 "volatility": volatility
             },
             
-            # 장기 이평선 데이터
-            "price_block": long_evidence.get("장기추세", {})
+            # 밸류에이션 지표
+            "peg_ratio": long_valuation.get("trailingPEG", 0),
+            "roe": long_valuation.get("ROE", 0),
+            "current_ratio": long_valuation.get("currentRatio", 0)
         },
         "mid_term": {
-            "ma_trend": mid_res.get("outlook", "N/A"),
-            "ma_state": f"Support: {mid_evidence.get('지지선')}, Resistance: {mid_evidence.get('저항선')}",
-            "rsi_value": mid_evidence.get("RSI", 0),
-            "rsi_signal": "Neutral",
-            "message": f"국면: {mid_evidence.get('국면', 'N/A')}, {mid_res.get('outlook', 'N/A')}"
+            "rsi_value": mid_evidence.get("RSI", 0)
         },
         "short_term": {
-            "candle_pattern": short_res.get("outlook", "N/A"),
-            "volume_ratio": int(short_yesterday.get("거래량배수", 1.0) * 100),
-            "pivot_point": short_pivot.get("Pivot", 0),
-            "r1": short_pivot.get("R1", 0),
-            "s1": short_pivot.get("S1", 0),
-            "message": f"단기 전망: {short_res.get('outlook', 'N/A')}"
+            "current_price": short_pivot.get("Pivot", 0) # 현재가 백업용
         },
         "llm_output": llm_output
     }
