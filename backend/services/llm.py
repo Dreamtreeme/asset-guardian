@@ -197,12 +197,15 @@ class LLMService:
                     flags=re.DOTALL
                 )
                 
+                print(f"[DEBUG] 정리된 JSON (first 500 chars): {json_str[:500]}")
+                
                 llm_output = json.loads(json_str)
                 print(f"[DEBUG] LLM JSON PARSED: {llm_output.get('investment_rating')}, Target: {llm_output.get('target_price')}")
                 return llm_output
                 
             except json.JSONDecodeError as e:
-                print(f"[WARNING] JSON 파싱 실패: {e}, 기본 구조 반환")
+                print(f"[WARNING] JSON 파싱 실패: {e}")
+                print(f"[DEBUG] 문제의 JSON 문자열 (first 1000 chars): {json_str[:1000] if 'json_str' in locals() else 'N/A'}")
                 return {
                     "investment_rating": "Neutral",
                     "target_price": 0,
