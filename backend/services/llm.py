@@ -141,13 +141,11 @@ class LLMService:
         symbol = analysis_data.get("symbol")
         company_name = analysis_data.get("company_name", symbol)
         data_context = json.dumps(analysis_data, indent=2, ensure_ascii=False)
-        
-        print(f"\n{'='*50}\n[DEBUG] LLM REQUEST FOR {company_name} ({symbol})\n{data_context}\n{'='*50}")
 
         try:
             message = await self.client.messages.create(
                 model="claude-opus-4-5",
-                max_tokens=2048,
+                max_tokens=8192,  # 4096 → 8192로 증가 (긴 보고서 완전 생성)
                 system=RESEARCH_REPORT_PROMPT,
                 messages=[
                     {
