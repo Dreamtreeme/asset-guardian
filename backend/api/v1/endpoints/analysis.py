@@ -76,6 +76,7 @@ async def get_analysis(
     
     llm_output = None
     today = date.today()
+    print(f"[DEBUG] Starting LLM/Cache flow for {symbol}")
     
     # 캐시 확인
     try:
@@ -87,11 +88,15 @@ async def get_analysis(
         
         if cached_report:
             llm_output = cached_report.llm_output
-    except:
-        pass  # 캐시 실패 시 새로 생성
+            print(f"[DEBUG] Cache HIT - llm_output type: {type(llm_output)}, keys: {list(llm_output.keys()) if isinstance(llm_output, dict) else 'N/A'}")
+        else:
+            print(f"[DEBUG] Cache MISS - will call LLM")
+    except Exception as cache_err:
+        print(f"[DEBUG] Cache error: {cache_err}")
     
     # LLM 호출 및 캐시 저장
     if llm_output is None:
+        print(f"[DEBUG] Calling LLM for {symbol}")
         analysis_data_preprocessed = {
             "symbol": symbol,
             "company_name": company_name,
@@ -101,6 +106,7 @@ async def get_analysis(
         }
         
         llm_output = await llm_service.generate_report(analysis_data_preprocessed)
+        print(f"[DEBUG] LLM returned - type: {type(llm_output)}, keys: {list(llm_output.keys()) if isinstance(llm_output, dict) else 'N/A'}")
         
         # 캐시 저장
         try:
@@ -110,8 +116,12 @@ async def get_analysis(
                 llm_output=llm_output
             ))
             db.commit()
-        except:
+            print(f"[DEBUG] Cache saved successfully")
+        except Exception as save_err:
+            print(f"[DEBUG] Cache save failed: {save_err}")
             db.rollback()
+    
+    print(f"[DEBUG] Before return - llm_output type: {type(llm_output)}, keys: {list(llm_output.keys()) if isinstance(llm_output, dict) else 'N/A'}")
     
     # 응답 데이터 구조화 (가독성 개선)
     long_evidence = long_res.get("evidence", {})

@@ -187,7 +187,7 @@ class LLMService:
                 ]
             )
             response_text = message.content[0].text
-            # LLM 응답 수신됨
+            print(f"[LLM DEBUG] Response length: {len(response_text)} chars")
             
             # JSON 파싱
             try:
@@ -196,13 +196,17 @@ class LLMService:
                     json_start = response_text.find("```json") + 7
                     json_end = response_text.find("```", json_start)
                     json_str = response_text[json_start:json_end].strip()
+                    print(f"[LLM DEBUG] Found JSON block, length: {len(json_str)}")
                 elif response_text.strip().startswith("{"):
                     json_str = response_text.strip()
+                    print(f"[LLM DEBUG] Raw JSON, length: {len(json_str)}")
                 else:
+                    print(f"[LLM DEBUG] No JSON found in response")
                     raise ValueError("Invalid response format")
                 
                 # 파싱 및 정리
                 llm_output = json.loads(json_str)
+                print(f"[LLM DEBUG] JSON parsed successfully, keys: {list(llm_output.keys())}")
                 
                 # 문자열 필드 정리
                 for key in ['key_thesis', 'primary_risk']:
@@ -230,18 +234,17 @@ class LLMService:
 """
                 llm_output["report_markdown"] = report_markdown
                 
-                # JSON 파싱 성공
+                print(f"[LLM DEBUG] Returning successful response with {len(llm_output)} fields")
                 return llm_output
                 
             except json.JSONDecodeError as e:
-                print(f"[WARNING] JSON 파싱 실패: {e}")
-                # 기본 응답 반환
+                print(f"[LLM ERROR] JSON parsing failed: {e}")
             
         except Exception as e:
-            # 모든 오류에 대한 기본 응답
-            pass
+            print(f"[LLM ERROR] Exception in generate_report: {type(e).__name__}: {e}")
         
         # 기본 응답 (파싱 실패 또는 예외 발생 시)
+        print(f"[LLM ERROR] Returning fallback response")
         return {
             "investment_rating": "Neutral",
             "target_price": 0,
