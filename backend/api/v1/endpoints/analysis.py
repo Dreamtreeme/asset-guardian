@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from api import deps
-from schemas.analysis import AnalysisCreate, AnalysisOut
+from services.collector import collector
+from services.engine.finance import analyze_long_term
+from services.engine.technical import analyze_mid_term, analyze_short_term
 
 router = APIRouter()
 
@@ -14,43 +13,54 @@ async def create_analysis(
     """
     분석 실행 API
     """
+    # 실제로는 여기서 DB에 기록하고 비동기 작업을 생성하지만,
+    # 지금은 간단하게 ID만 넘기는 스텁 유지
     return {"id": 1, "status": "pending", "symbol": analysis_in.symbol}
 
 @router.get("/{analysis_id}", response_model=AnalysisOut)
 async def get_analysis(
     *,
     db: Session = Depends(deps.get_db),
-    analysis_id: int
+    analysis_id: int,
+    symbol: str = "AAPL" # 임시로 symbol을 쿼리로 받거나 DB에서 조회해야 함
 ):
     """
     분석 상태 조회 API
     """
+    # 1. 데이터 수집
+    td = await collector.fetch_ticker_data(symbol)
+    
+    # 2. 엔진 실행
+    long_res = analyze_long_term(td)
+    mid_res = analyze_mid_term(td)
+    short_res = analyze_short_term(td)
+    
     return {
         "id": analysis_id,
         "status": "completed",
-        "symbol": "AAPL",
+        "symbol": symbol,
         "long_term": {
-            "fundamental_trend": "Growth",
-            "revenue_slope": 0.85,
-            "peg_ratio": 0.45,
-            "valuation_status": "강력 매수 (매우 저평가)",
-            "message": "매출 및 이익 성장세가 뚜렷하며 PEG 기준 현저한 저평가 상태입니다."
+            "fundamental_trend": long_res["evidence"]["판정"],
+            "revenue_slope": long_res["evidence"]["재무추세"]["매출"].get("기울기"),
+            "peg_ratio": long_res["evidence"]["밸류에이션"].get("trailingPE", 0) / 100, # 가상 PEG
+            "valuation_status": long_res["outlook"],
+            "message": f"재무 판정: {long_res['evidence']['판정']}, {long_res['outlook']}"
         },
         "mid_term": {
-            "ma_trend": "강력 상승 (정배열)",
-            "ma_state": "Price > MA20 > MA60 > MA200",
-            "rsi_value": 55,
-            "rsi_signal": "매수세 유입",
-            "message": "주요 이동평균선이 정배열 상태를 유지하며 완만한 상승 흐름을 보이고 있습니다."
+            "ma_trend": mid_res["outlook"],
+            "ma_state": f"Support: {mid_res['evidence']['지지선']}, Resistance: {mid_res['evidence']['저항선']}",
+            "rsi_value": 55, # Placeholder or add to technical.py
+            "rsi_signal": "Neutral",
+            "message": f"국면: {mid_res['evidence']['국면']}, {mid_res['outlook']}"
         },
         "short_term": {
-            "candle_pattern": "장대양봉 (Long Body Bullish)",
-            "volume_ratio": 185,
-            "pivot_point": 185.5,
-            "r1": 188.2,
-            "r2": 190.5,
-            "s1": 183.0,
-            "s2": 180.5,
-            "message": "전일 강력한 수급과 함께 장대양봉이 발생했습니다. 시초가 Pivot 상단 유지 시 R1까지의 상승을 기대할 수 있습니다."
+            "candle_pattern": short_res["outlook"],
+            "volume_ratio": int(short_res["evidence"]["전일"]["거래량배수"] * 100),
+            "pivot_point": short_res["evidence"]["금일피봇"]["Pivot"],
+            "r1": short_res["evidence"]["금일피봇"]["R1"],
+            "r2": short_res["evidence"]["금일피봇"]["R1"] * 1.02,
+            "s1": short_res["evidence"]["금일피봇"]["S1"],
+            "s2": short_res["evidence"]["금일피봇"]["S1"] * 0.98,
+            "message": f"단기 전망: {short_res['outlook']}"
         }
     }
