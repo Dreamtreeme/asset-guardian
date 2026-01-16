@@ -1,9 +1,6 @@
 import streamlit as st
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import requests
 
 # ==============================================================================
@@ -41,7 +38,9 @@ def get_real_time_analysis(symbol):
             st.warning(f"POST 요청 실패: {res_post.status_code}")
             return None
         
-        analysis_id = 1
+        # POST 응답에서 analysis_id 추출
+        analysis_id = res_post.json().get("id", 1)
+        
         res_get = requests.get(f"{API_URL}/{analysis_id}?symbol={symbol}", timeout=120)
         if res_get.status_code == 200:
             return res_get.json()
@@ -266,8 +265,13 @@ def main():
     
     if "analysis" in st.session_state:
         res = st.session_state.analysis
-        # llm_output 또는 report 필드 확인 (하위 호환성)
-        llm_data = res.get("llm_output") or res.get("report") or {}
+        
+        # llm_output 명시적 체크 (빈 딕셔너리도 유효한 값)
+        llm_data = res.get("llm_output")
+        if llm_data is None:
+            llm_data = res.get("report", {})
+        if not isinstance(llm_data, dict):
+            llm_data = {}
         
         company_name = res.get("company_name", res.get("symbol", "Unknown"))
         current_price = llm_data.get("current_price", res.get("short_term", {}).get("pivot_point", 0))

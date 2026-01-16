@@ -63,16 +63,7 @@ async def get_analysis(
         }
 
     # 4. LLM 보고서 생성
-    # 종목 코드를 실제 회사 이름으로 치환 (정보가 있는 경우)
     company_name = td.info.get("longName") or td.info.get("shortName") or symbol
-    
-    analysis_data = {
-        "symbol": symbol,
-        "company_name": company_name,
-        "long_term": long_res,
-        "mid_term": mid_res,
-        "short_term": short_res
-    }
     
     # 캐시 또는 LLM 호출
     from datetime import datetime, date
@@ -122,33 +113,42 @@ async def get_analysis(
         except:
             db.rollback()
     
+    # 응답 데이터 구조화 (가독성 개선)
+    long_evidence = long_res.get("evidence", {})
+    long_trends = long_evidence.get("재무추세", {})
+    long_valuation = long_evidence.get("밸류에이션", {})
+    
+    mid_evidence = mid_res.get("evidence", {})
+    
+    short_evidence = short_res.get("evidence", {})
+    short_pivot = short_evidence.get("금일피봇", {})
+    short_yesterday = short_evidence.get("전일", {})
+    
     return {
         "id": analysis_id,
         "status": "completed",
         "symbol": symbol,
         "company_name": company_name,
         "long_term": {
-            "fundamental_trend": long_res.get("evidence", {}).get("판정", "N/A"),
-            "revenue_slope": long_res.get("evidence", {}).get("재무추세", {}).get("매출", {}).get("기울기"),
-            "peg_ratio": long_res.get("evidence", {}).get("밸류에이션", {}).get("trailingPEG", 0),
+            "fundamental_trend": long_evidence.get("판정", "N/A"),
+            "revenue_slope": long_trends.get("매출", {}).get("기울기"),
+            "peg_ratio": long_valuation.get("trailingPEG", 0),
             "valuation_status": long_res.get("outlook", "N/A"),
-            "message": f"재무 판정: {long_res.get('evidence', {}).get('판정', 'N/A')}, {long_res.get('outlook', 'N/A')}"
+            "message": f"재무 판정: {long_evidence.get('판정', 'N/A')}, {long_res.get('outlook', 'N/A')}"
         },
         "mid_term": {
             "ma_trend": mid_res.get("outlook", "N/A"),
-            "ma_state": f"Support: {mid_res.get('evidence', {}).get('지지선')}, Resistance: {mid_res.get('evidence', {}).get('저항선')}",
-            "rsi_value": mid_res.get("evidence", {}).get("RSI", 0),
+            "ma_state": f"Support: {mid_evidence.get('지지선')}, Resistance: {mid_evidence.get('저항선')}",
+            "rsi_value": mid_evidence.get("RSI", 0),
             "rsi_signal": "Neutral",
-            "message": f"국면: {mid_res.get('evidence', {}).get('국면', 'N/A')}, {mid_res.get('outlook', 'N/A')}"
+            "message": f"국면: {mid_evidence.get('국면', 'N/A')}, {mid_res.get('outlook', 'N/A')}"
         },
         "short_term": {
             "candle_pattern": short_res.get("outlook", "N/A"),
-            "volume_ratio": int(short_res.get("evidence", {}).get("전일", {}).get("거래량배수", 1.0) * 100),
-            "pivot_point": short_res.get("evidence", {}).get("금일피봇", {}).get("Pivot", 0),
-            "r1": short_res.get("evidence", {}).get("금일피봇", {}).get("R1", 0),
-            "r2": short_res.get("evidence", {}).get("금일피봇", {}).get("R1", 0) * 1.02,
-            "s1": short_res.get("evidence", {}).get("금일피봇", {}).get("S1", 0),
-            "s2": short_res.get("evidence", {}).get("금일피봇", {}).get("S1", 0) * 0.98,
+            "volume_ratio": int(short_yesterday.get("거래량배수", 1.0) * 100),
+            "pivot_point": short_pivot.get("Pivot", 0),
+            "r1": short_pivot.get("R1", 0),
+            "s1": short_pivot.get("S1", 0),
             "message": f"단기 전망: {short_res.get('outlook', 'N/A')}"
         },
         "llm_output": llm_output
