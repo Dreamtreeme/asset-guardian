@@ -88,21 +88,19 @@ async def get_analysis(
         
         if cached_report:
             llm_output = cached_report.llm_output
-    except Exception as cache_err:
-        pass
+    # 리스크 지표 계산
+    import numpy as np
+    var_5_pct = 0
+    volatility = 0
+    if hasattr(td, 'px_10y') and not td.px_10y.empty:
+        daily_returns = td.px_10y["Close"].pct_change().dropna()
+        var_5_pct = float(daily_returns.quantile(0.05)) if len(daily_returns) > 0 else 0
+        volatility = float(daily_returns.std() * np.sqrt(252)) if len(daily_returns) > 0 else 0
 
-    
-        # 리스크 지표 계산 (LLM 전달용)
-        import numpy as np
-        var_5_pct = 0
-        volatility = 0
-        if hasattr(td, 'px_10y') and not td.px_10y.empty:
-            daily_returns = td.px_10y["Close"].pct_change().dropna()
-            var_5_pct = float(daily_returns.quantile(0.05)) if len(daily_returns) > 0 else 0
-            volatility = float(daily_returns.std() * np.sqrt(252)) if len(daily_returns) > 0 else 0
-        
+    # LLM 호출 및 캐시 저장
+    if llm_output is None:
         long_term_data = preprocess_financial_data(long_res)
-        # 리스크 지표 추가
+        # 리스크 지표 추가 (LLM 참고용)
         long_term_data["risk_metrics_raw"] = {
             "var_5_pct": var_5_pct,
             "volatility": volatility,
@@ -119,7 +117,6 @@ async def get_analysis(
         
         llm_output = await llm_service.generate_report(analysis_data_preprocessed)
 
-        
         # 캐시 저장
         try:
             db.add(ReportCache(
@@ -128,7 +125,6 @@ async def get_analysis(
                 llm_output=llm_output
             ))
             db.commit()
-
         except Exception as save_err:
             db.rollback()
     
