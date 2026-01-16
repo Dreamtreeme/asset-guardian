@@ -92,12 +92,27 @@ async def get_analysis(
         pass
 
     
-    # LLM 호출 및 캐시 저장
-    if llm_output is None:
+        # 리스크 지표 계산 (LLM 전달용)
+        import numpy as np
+        var_5_pct = 0
+        volatility = 0
+        if hasattr(td, 'px_10y') and not td.px_10y.empty:
+            daily_returns = td.px_10y["Close"].pct_change().dropna()
+            var_5_pct = float(daily_returns.quantile(0.05)) if len(daily_returns) > 0 else 0
+            volatility = float(daily_returns.std() * np.sqrt(252)) if len(daily_returns) > 0 else 0
+        
+        long_term_data = preprocess_financial_data(long_res)
+        # 리스크 지표 추가
+        long_term_data["risk_metrics_raw"] = {
+            "var_5_pct": var_5_pct,
+            "volatility": volatility,
+            "max_drawdown_5y": long_res.get("evidence", {}).get("장기추세", {}).get("최근5년_MDD", 0)
+        }
+
         analysis_data_preprocessed = {
             "symbol": symbol,
             "company_name": company_name,
-            "long_term": preprocess_financial_data(long_res),
+            "long_term": long_term_data,
             "mid_term": preprocess_technical_data(mid_res),
             "short_term": preprocess_short_term_data(short_res)
         }
@@ -130,15 +145,7 @@ async def get_analysis(
     short_pivot = short_evidence.get("금일피봇", {})
     short_yesterday = short_evidence.get("전일", {})
     
-    # 리스크 지표 계산
-    if hasattr(td, 'px_10y') and not td.px_10y.empty:
-        import numpy as np
-        daily_returns = td.px_10y["Close"].pct_change().dropna()
-        var_5_pct = float(daily_returns.quantile(0.05)) if len(daily_returns) > 0 else 0
-        volatility = float(daily_returns.std() * np.sqrt(252)) if len(daily_returns) > 0 else 0
-    else:
-        var_5_pct = 0
-        volatility = 0
+    # 상단에서 이미 리스크 지표 계산됨
     
     return {
         "id": analysis_id,

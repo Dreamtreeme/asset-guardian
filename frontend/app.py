@@ -410,21 +410,43 @@ def plot_return_distribution(price_history):
     fig = go.Figure()
     fig.add_trace(go.Histogram(
         x=daily_returns,
-        nbinsx=50,
+        xbins=dict(size=0.5), # 0.5% 단위로 고정
         name='일간 수익률',
-        marker_color='#3B82F6'
+        marker_color='rgba(59, 130, 246, 0.7)',
+        marker_line=dict(color='white', width=0.5)
     ))
     
     var_5 = daily_returns.quantile(0.05)
-    fig.add_vline(x=var_5, line_dash="dash", line_color="red", line_width=2,
-                  annotation_text=f"VaR 5%: {var_5:.2f}%")
+    fig.add_vline(x=var_5, line_dash="dash", line_color="#DC2626", line_width=2)
+    fig.add_annotation(
+        x=var_5, y=1, yref="paper",
+        text=f"VaR 5%: {var_5:.2f}%",
+        showarrow=False,
+        xanchor="right",
+        font=dict(color="#DC2626", size=11),
+        bgcolor="rgba(255, 255, 255, 0.8)"
+    )
+    
+    # 0선 추가
+    fig.add_vline(x=0, line_color="#64748B", line_width=1, opacity=0.5)
     
     fig.update_layout(
         xaxis_title="일간 수익률 (%)",
-        yaxis_title="빈도",
-        height=300,
-        margin=dict(l=40, r=40, t=30, b=40), # 여백 증가
+        yaxis_title="빈도 (일수)",
+        height=320,
+        margin=dict(l=50, r=40, t=40, b=50),
         plot_bgcolor='white',
+        bargap=0.05,
+        xaxis=dict(
+            dtick=1,
+            showgrid=True,
+            gridcolor='#F1F5F9',
+            zeroline=False
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor='#F1F5F9'
+        ),
         showlegend=False
     )
     
@@ -651,9 +673,9 @@ def render_technical(mid_data, llm_data):
     st.markdown("---")
 
 
-def render_risk_analysis(long_data):
+def render_risk_analysis(long_data, llm_data):
     """리스크 분석 섹션"""
-    st.markdown('<div class="section-title">3. 리스크 분석</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">리스크 분석</div>', unsafe_allow_html=True)
     
     # 차트 2개 좌우 배치
     c1, c2 = st.columns([1, 1], gap="large")
@@ -678,6 +700,14 @@ def render_risk_analysis(long_data):
     # 장기 이평선
     st.markdown("**이동평균선 (장기 추세)**")
     st.plotly_chart(plot_moving_averages(price_history), use_container_width=True)
+    
+    # LLM 리스크 분석 텍스트 추가
+    st.markdown(f"""
+    <div class="insight-box risk">
+        <h4>AI 리스크 진단</h4>
+        <p>{llm_data.get('risk_analysis', '리스크 데이터 분석 중...')}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 def main():
     st.sidebar.title("주식 분석 시스템")
@@ -711,7 +741,7 @@ def main():
         render_fundamental(res["long_term"], llm_data)
         render_valuation(res["long_term"], llm_data)
         render_technical(res["mid_term"], llm_data)
-        render_risk_analysis(res["long_term"])
+        render_risk_analysis(res["long_term"], llm_data)
         
         # 전문 리서치 보고서 섹션
         st.markdown("---")
