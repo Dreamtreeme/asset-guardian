@@ -201,11 +201,15 @@ class LLMService:
                     flags=re.DOTALL
                 )
                 
+                print(f"[DEBUG] Extracted JSON string (first 300 chars): {json_str[:300]}")
+                print(f"[DEBUG] Extracted markdown (first 200 chars): {report_markdown[:200] if report_markdown else 'EMPTY'}")
+                
                 llm_output = json.loads(json_str)
                 llm_output["report_markdown"] = report_markdown  # 마크다운 추가
                 
                 print(f"[DEBUG] LLM JSON PARSED: {llm_output.get('investment_rating')}, Target: {llm_output.get('target_price')}")
                 print(f"[DEBUG] Report length: {len(report_markdown)} chars")
+                print(f"[DEBUG] Final llm_output keys: {list(llm_output.keys())}")
                 return llm_output
                 
             except json.JSONDecodeError as e:
