@@ -111,16 +111,24 @@ RESEARCH_REPORT_PROMPT = """
 
 ```json
 {
-  "investment_rating": "Overweight" | "Neutral" | "Underweight",
-  "target_price": 숫자,
-  "current_price": 숫자,
-  "upside_pct": 숫자,
+  "investment_rating": "Overweight",
+  "target_price": 92000,
+  "current_price": 76800,
+  "upside_pct": 19.8,
   "target_period_months": 12,
-  "key_thesis": "핵심 투자 논거 1줄",
-  "primary_risk": "주요 리스크 1줄",
+  "key_thesis": "핵심 투자 논거 1줄 (줄바꿈 금지)",
+  "primary_risk": "주요 리스크 1줄 (줄바꿈 금지)",
   "report_markdown": "전체 보고서 마크다운 텍스트"
 }
 ```
+
+**중요한 JSON 작성 규칙:**
+1. 모든 문자열 값은 큰따옴표(")로 감싸야 합니다
+2. 문자열 내부에 줄바꿈(\n)이 있으면 안 됩니다 - 한 줄로 작성하세요
+3. 문자열 내부에 큰따옴표가 있으면 반드시 이스케이프(\")하세요
+4. investment_rating은 반드시 "Overweight", "Neutral", "Underweight" 중 하나여야 합니다
+5. 숫자 필드(target_price, current_price 등)는 따옴표 없이 숫자만 입력하세요
+6. report_markdown 필드만 줄바꿈을 포함할 수 있으며, 반드시 \\n으로 이스케이프하세요
 
 JSON 외부에 다른 텍스트를 포함하지 마십시오. 반드시 유효한 JSON만 반환하십시오.
 """
