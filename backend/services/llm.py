@@ -163,8 +163,6 @@ RESEARCH_REPORT_PROMPT = """
 - 모든 문자열 값은 줄바꿈 없이 한 줄로 작성하세요
 - 모든 텍스트는 한국어로만 작성하세요
 """
-- 마크다운 보고서는 JSON 블록 바로 다음 줄부터 시작하세요
-"""
 
 class LLMService:
     def __init__(self):
