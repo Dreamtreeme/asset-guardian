@@ -134,6 +134,16 @@ async def get_analysis(
     short_pivot = short_evidence.get("금일피봇", {})
     short_yesterday = short_evidence.get("전일", {})
     
+    # 리스크 지표 계산
+    if hasattr(td, 'px_10y') and not td.px_10y.empty:
+        import numpy as np
+        daily_returns = td.px_10y["Close"].pct_change().dropna()
+        var_5_pct = float(daily_returns.quantile(0.05) * 100) if len(daily_returns) > 0 else 0
+        volatility = float(daily_returns.std() * np.sqrt(252) * 100) if len(daily_returns) > 0 else 0
+    else:
+        var_5_pct = 0
+        volatility = 0
+    
     return {
         "id": analysis_id,
         "status": "completed",
@@ -153,25 +163,11 @@ async def get_analysis(
             
             # 차트용 가격 데이터 (최근 1년)
             "price_history": {
-                "dates": [str(d) for d in td.px_10y.index[-252:].tolist()],  # 최근 1년
+                "dates": [str(d) for d in td.px_10y.index[-252:].tolist()],
                 "close": td.px_10y["Close"].iloc[-252:].tolist()
             } if hasattr(td, 'px_10y') and not td.px_10y.empty else {},
             
-            # 리스크 지표 계산
-            if hasattr(td, 'px_10y') and not td.px_10y.empty:
-                # 일간 수익률 계산
-                daily_returns = td.px_10y["Close"].pct_change().dropna()
-                
-                # VaR 5% (하위 5% 분위수)
-                var_5_pct = float(daily_returns.quantile(0.05) * 100) if len(daily_returns) > 0 else 0
-                
-                # 연간 변동성 (일간 표준편차 × √252)
-                import numpy as np
-                volatility = float(daily_returns.std() * np.sqrt(252) * 100) if len(daily_returns) > 0 else 0
-            else:
-                var_5_pct = 0
-                volatility = 0
-            
+            # 리스크 지표
             "risk_metrics": {
                 "max_drawdown_5y": long_evidence.get("장기추세", {}).get("최근5년_MDD", 0),
                 "var_5_pct": var_5_pct,
