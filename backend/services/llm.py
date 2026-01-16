@@ -148,12 +148,12 @@ RESEARCH_REPORT_PROMPT = """
   "current_price": 148900,
   "upside_pct": 4.1,
   "target_period_months": 12,
-  "key_thesis": "HBM3E 양산 확대로 영업이익률 14.1%까지 회복, Forward P/E 8.6x는 저평가이나 RSI 92 과열로 단기 조정 불가피",
-  "primary_risk": "RSI 92 극단적 과매수 구간 진입으로 지지선 106,300원까지 -28% 조정 가능성, 중국 경기 둔화 시 메모리 수요 위축",
-  "executive_summary": "삼성전자에 대해 Neutral 의견을 제시하며, 12개월 목표가는 155,000원(+4.1%)입니다. 반도체 업황 회복으로 실적 개선 중이나, 극단적 기술적 과열로 단기 조정 압력 존재합니다.",
-  "fundamental_analysis": "매출은 분기당 +1.3조 원 증가하며 안정적 성장세를 보이고 있습니다. 영업이익률은 14.1%로 분기당 +0.28%p 개선 중이며, HBM3E 양산 본격화 시 추가 상승 여력이 있습니다. Forward P/E 8.6x는 글로벌 반도체 업종 평균 대비 40% 할인된 수준으로 밸류에이션 매력이 존재합니다. 다만 ROE 8.3%는 TSMC(25%) 대비 낮아 자본 효율성 개선이 필요합니다. FCF는 22.6조 원으로 견고한 현금창출력을 유지하고 있으나, 분기당 -3,910억 원 감소 추세는 주의가 필요합니다.",
-  "technical_analysis": "현재가 148,900원은 200일 이동평균선 대비 +87.6% 괴리되어 극단적 과매수 상태입니다. RSI 92는 2020년 이후 최고 수준으로, 역사적으로 이 구간에서는 평균 7거래일 내 -5~8% 조정이 발생했습니다. 현재가가 저항선 148,900원에 정확히 위치하여 추가 상승 여력이 제한적이며, 지지선 106,300원까지 -28.6% 하락 리스크가 상존합니다. VIX 15.7의 완화된 변동성 국면은 중기적으로 우호적이나, 단기 기술적 조정 압력이 우선합니다.",
-  "conclusion": "펀더멘털 개선 추세는 긍정적이나, 기술적 과열로 신규 진입은 보류를 권고합니다. 기존 보유자는 150,000원 돌파 시 30% 차익실현을 검토하고, 신규 진입 대기자는 140,000~142,000원 조정 구간에서 분할 매수 전략을 권고합니다. Stop Loss는 132,000원(-12.7%)으로 설정하십시오."
+  "key_thesis": "영업이익률 14.1% 회복 추세, Forward P/E 8.6x는 업종 평균 대비 저평가이나 RSI 92 극단적 과매수로 단기 조정 불가피",
+  "primary_risk": "RSI 92 과매수 구간 진입으로 지지선까지 -28% 조정 가능성, 최근 5년 MDD -45% 이력상 변동성 확대 시 급락 리스크",
+  "executive_summary": "중립 의견으로 12개월 목표가 155,000원(+4.1%)을 제시합니다. 영업이익률 개선 추세는 긍정적이나 기술적 과열로 단기 조정 압력이 존재합니다.",
+  "fundamental_analysis": "매출은 분기당 +1.3조 원 증가하며 안정적 성장세를 보이고 있습니다. 영업이익률은 14.1%로 분기당 +0.28%p 개선 중입니다. Forward P/E 8.6x는 글로벌 반도체 업종 평균 대비 40% 할인된 수준입니다. ROE 8.3%는 개선이 필요하며, FCF는 22.6조 원으로 견고하나 분기당 -3,910억 원 감소 추세입니다.",
+  "technical_analysis": "현재가는 200일 이동평균선 대비 +87.6% 괴리되어 극단적 과매수 상태입니다. RSI 92는 역사적 최고 수준으로 평균 7거래일 내 조정이 예상됩니다. 저항선 도달로 추가 상승 여력이 제한적이며, 지지선까지 -28.6% 하락 리스크가 상존합니다.",
+  "conclusion": "펀더멘털 개선은 긍정적이나 기술적 과열로 신규 진입은 보류를 권고합니다. 기존 보유자는 150,000원 돌파 시 30% 차익실현을 검토하고, 신규 진입은 140,000원 조정 구간에서 분할 매수를 권고합니다."
 }
 ```
 
@@ -162,6 +162,7 @@ RESEARCH_REPORT_PROMPT = """
 - JSON 외부에 다른 텍스트를 포함하지 마세요
 - 모든 문자열 값은 줄바꿈 없이 한 줄로 작성하세요
 - 모든 텍스트는 한국어로만 작성하세요
+- **제공된 데이터에 기반한 분석만 작성하세요 (추측/예측 금지)**
 """
 
 class LLMService:
@@ -186,11 +187,11 @@ class LLMService:
                 ]
             )
             response_text = message.content[0].text
-            print(f"\n{'='*50}\n[DEBUG] LLM RESPONSE RECEIVED ({len(response_text)} chars)\n{response_text}\n{'='*50}")
+            # LLM 응답 수신됨
             
-            # JSON 파싱 시도
+            # JSON 파싱
             try:
-                # JSON 블록 추출
+                # JSON 추출
                 if "```json" in response_text:
                     json_start = response_text.find("```json") + 7
                     json_end = response_text.find("```", json_start)
@@ -198,34 +199,15 @@ class LLMService:
                 elif response_text.strip().startswith("{"):
                     json_str = response_text.strip()
                 else:
-                    # JSON 형식이 아니면 기본 구조 반환
-                    return {
-                        "investment_rating": "Neutral",
-                        "target_price": 0,
-                        "current_price": 0,
-                        "upside_pct": 0,
-                        "target_period_months": 12,
-                        "key_thesis": "데이터 분석 중",
-                        "primary_risk": "불확실성",
-                        "report_markdown": "분석 중입니다."
-                    }
+                    raise ValueError("Invalid response format")
                 
-                # JSON 파싱 (간단한 정리만)
-                import re
-                json_str = re.sub(
-                    r'("key_thesis"\s*:\s*")(.*?)(")',
-                    lambda m: m.group(1) + m.group(2).replace('\n', ' ').strip() + m.group(3),
-                    json_str,
-                    flags=re.DOTALL
-                )
-                json_str = re.sub(
-                    r'("primary_risk"\s*:\s*")(.*?)(")',
-                    lambda m: m.group(1) + m.group(2).replace('\n', ' ').strip() + m.group(3),
-                    json_str,
-                    flags=re.DOTALL
-                )
-                
+                # 파싱 및 정리
                 llm_output = json.loads(json_str)
+                
+                # 문자열 필드 정리
+                for key in ['key_thesis', 'primary_risk']:
+                    if key in llm_output and isinstance(llm_output[key], str):
+                        llm_output[key] = llm_output[key].replace('\n', ' ').strip()
                 
                 # 마크다운 보고서 생성 (JSON 필드에서 조합)
                 report_markdown = f"""# {company_name} ({symbol})
@@ -248,35 +230,27 @@ class LLMService:
 """
                 llm_output["report_markdown"] = report_markdown
                 
-                print(f"[DEBUG] LLM JSON PARSED: {llm_output.get('investment_rating')}, Target: {llm_output.get('target_price')}")
-                print(f"[DEBUG] Report length: {len(report_markdown)} chars")
-                print(f"[DEBUG] Final llm_output keys: {list(llm_output.keys())}")
+                # JSON 파싱 성공
                 return llm_output
                 
             except json.JSONDecodeError as e:
                 print(f"[WARNING] JSON 파싱 실패: {e}")
-                print(f"[DEBUG] 문제의 JSON 문자열 (first 1000 chars): {json_str[:1000] if 'json_str' in locals() else 'N/A'}")
-                return {
-                    "investment_rating": "Neutral",
-                    "target_price": 0,
-                    "current_price": 0,
-                    "upside_pct": 0,
-                    "target_period_months": 12,
-                    "key_thesis": "JSON 파싱 실패",
-                    "primary_risk": "데이터 오류",
-                    "report_markdown": response_text
-                }
-                
+                # 기본 응답 반환
+            
         except Exception as e:
-            return {
-                "investment_rating": "Neutral",
-                "target_price": 0,
-                "current_price": 0,
-                "upside_pct": 0,
-                "target_period_months": 12,
-                "key_thesis": f"보고서 생성 오류: {str(e)}",
-                "primary_risk": "시스템 오류",
-                "report_markdown": f"보고서 생성 중 오류 발생: {str(e)}"
-            }
+            # 모든 오류에 대한 기본 응답
+            pass
+        
+        # 기본 응답 (파싱 실패 또는 예외 발생 시)
+        return {
+            "investment_rating": "Neutral",
+            "target_price": 0,
+            "current_price": 0,
+            "upside_pct": 0,
+            "target_period_months": 12,
+            "key_thesis": "데이터 분석 중",
+            "primary_risk": "불확실성",
+            "report_markdown": "보고서 생성 중 오류가 발생했습니다."
+        }
 
 llm_service = LLMService()

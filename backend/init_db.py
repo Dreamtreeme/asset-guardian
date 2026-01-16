@@ -2,33 +2,18 @@
 데이터베이스 테이블 초기화 스크립트
 애플리케이션 시작 시 필요한 테이블을 자동 생성
 """
-from sqlalchemy import create_engine, text
-from core.config import settings
+from db.session import engine, Base
+from db.base import *  # 모든 모델을 import하여 Base에 등록
 
 def init_db():
     """데이터베이스 테이블 초기화"""
-    engine = create_engine(settings.DATABASE_URL)
-    
-    with engine.connect() as conn:
-        # report_cache 테이블 생성
-        conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS report_cache (
-                id SERIAL PRIMARY KEY,
-                symbol VARCHAR(20) NOT NULL,
-                report_date TIMESTAMP NOT NULL,
-                llm_output JSONB NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """))
-        
-        # 인덱스 생성
-        conn.execute(text("""
-            CREATE INDEX IF NOT EXISTS idx_symbol_date 
-            ON report_cache(symbol, report_date);
-        """))
-        
-        conn.commit()
-        print("[DB INIT] report_cache table created successfully")
+    try:
+        # Base에 등록된 모든 모델의 테이블을 자동 생성
+        Base.metadata.create_all(bind=engine)
+        pass  # 테이블 생성 완료
+    except Exception as e:
+        print(f"[DB INIT ERROR] Failed to create tables: {e}")
+        raise
 
 if __name__ == "__main__":
     init_db()

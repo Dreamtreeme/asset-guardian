@@ -65,29 +65,33 @@ async def get_analysis(
         "short_term": short_res
     }
     
-    # 캐시 확인: 오늘 날짜로 이미 생성된 보고서가 있는지 확인
+    # 캐시 또는 LLM 호출
     from datetime import datetime, date
     from models.report_cache import ReportCache
+    from services.preprocessing import (
+        preprocess_financial_data,
+        preprocess_technical_data,
+        preprocess_short_term_data
+    )
     
+    llm_output = None
     today = date.today()
-    cached_report = db.query(ReportCache).filter(
-        ReportCache.symbol == symbol,
-        ReportCache.report_date >= datetime.combine(today, datetime.min.time()),
-        ReportCache.report_date < datetime.combine(today, datetime.max.time())
-    ).first()
     
-    if cached_report:
-        print(f"[CACHE HIT] Using cached report for {symbol} from {cached_report.created_at}")
-        llm_output = cached_report.llm_output
-    else:
-        print(f"[CACHE MISS] Generating new report for {symbol}")
-        # 데이터 전처리: LLM에게 인간 친화적 형식으로 변환
-        from services.preprocessing import (
-            preprocess_financial_data,
-            preprocess_technical_data,
-            preprocess_short_term_data
-        )
+    # 캐시 확인
+    try:
+        cached_report = db.query(ReportCache).filter(
+            ReportCache.symbol == symbol,
+            ReportCache.report_date >= datetime.combine(today, datetime.min.time()),
+            ReportCache.report_date < datetime.combine(today, datetime.max.time())
+        ).first()
         
+        if cached_report:
+            llm_output = cached_report.llm_output
+    except:
+        pass  # 캐시 실패 시 새로 생성
+    
+    # LLM 호출 및 캐시 저장
+    if llm_output is None:
         analysis_data_preprocessed = {
             "symbol": symbol,
             "company_name": company_name,
@@ -100,16 +104,13 @@ async def get_analysis(
         
         # 캐시 저장
         try:
-            cache_entry = ReportCache(
+            db.add(ReportCache(
                 symbol=symbol,
                 report_date=datetime.now(),
                 llm_output=llm_output
-            )
-            db.add(cache_entry)
+            ))
             db.commit()
-            print(f"[CACHE SAVED] Report cached for {symbol}")
-        except Exception as e:
-            print(f"[CACHE ERROR] Failed to save cache: {e}")
+        except:
             db.rollback()
     
     return {

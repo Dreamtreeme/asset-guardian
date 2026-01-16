@@ -3,10 +3,8 @@ LLM 보고서 캐시 모델
 같은 날 같은 종목에 대한 중복 LLM 호출 방지
 """
 from sqlalchemy import Column, Integer, String, DateTime, JSON, Index
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-
-Base = declarative_base()
+from db.session import Base
 
 class ReportCache(Base):
     __tablename__ = "report_cache"
