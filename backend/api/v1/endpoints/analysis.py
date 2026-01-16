@@ -51,11 +51,8 @@ async def get_analysis(
             "mid_term": {"message": "데이터 수집 실패"},
             "short_term": {"message": "데이터 수집 실패"},
             "llm_output": {
-                "investment_rating": "Neutral",
-                "target_price": 0,
+                "investment_rating": "분석 불가",
                 "current_price": 0,
-                "upside_pct": 0,
-                "target_period_months": 12,
                 "key_thesis": "데이터 수집 실패",
                 "primary_risk": "시스템 오류",
                 "report_markdown": f"데이터 수집 실패로 보고서를 생성할 수 없습니다. (원인: {error_msg})"
