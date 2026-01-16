@@ -304,7 +304,8 @@ def main():
     
     if "analysis" in st.session_state:
         res = st.session_state.analysis
-        llm_data = res.get("llm_output", {})
+        # llm_output 또는 report 필드 확인 (하위 호환성)
+        llm_data = res.get("llm_output", res.get("report", {}))
         
         company_name = res.get("company_name", res.get("symbol", "Unknown"))
         current_price = llm_data.get("current_price", res["short_term"].get("pivot_point", 0))
