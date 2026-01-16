@@ -56,35 +56,19 @@ def get_real_time_analysis(symbol):
 # ==============================================================================
 
 def plot_financial_trends():
-    """재무 추세 라인 차트"""
-    quarters = ['23.1Q', '23.2Q', '23.3Q', '23.4Q', '24.1Q', '24.2Q', '24.3Q', '24.4Q']
-    revenue = [60, 62, 61, 63, 65, 67, 68, 70]
-    margin = [12, 11, 13, 14, 15, 15.5, 16, 16.5]
-    
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    
-    fig.add_trace(go.Scatter(
-        x=quarters, y=revenue, name="매출 (조원)",
-        mode='lines+markers',
-        line=dict(color='#0F172A', width=3),
-        marker=dict(size=8)
-    ), secondary_y=False)
-    
-    fig.add_trace(go.Scatter(
-        x=quarters, y=margin, name="영업이익률 (%)",
-        mode='lines+markers',
-        line=dict(color='#3B82F6', width=2, dash='dash'),
-        marker=dict(size=6)
-    ), secondary_y=True)
-    
-    fig.update_yaxes(title_text="매출 (조원)", secondary_y=False)
-    fig.update_yaxes(title_text="이익률 (%)", secondary_y=True)
+    """재무 추세 라인 차트 - 백엔드 데이터 연동 필요"""
+    # TODO: 백엔드에서 실제 재무 데이터를 받아와야 함
+    fig = go.Figure()
+    fig.add_annotation(
+        text="재무 데이터 연동 필요",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=16, color="gray")
+    )
     fig.update_layout(
         height=280,
         margin=dict(l=0, r=0, t=20, b=0),
-        plot_bgcolor='white',
-        hovermode='x unified',
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        plot_bgcolor='white'
     )
     return fig
 
@@ -113,41 +97,19 @@ def plot_valuation_bars(peg, roe, current_ratio):
     return fig
 
 def plot_price_chart():
-    """가격 라인 차트 (Mock 데이터)"""
-    dates = pd.date_range(start=datetime.today() - timedelta(days=120), periods=90)
-    np.random.seed(42)
-    base_price = 70000
-    price_changes = np.random.normal(100, 600, 90)
-    close = base_price + np.cumsum(price_changes)
-    
-    df = pd.DataFrame({'Date': dates, 'Close': close})
-    df['MA20'] = df['Close'].rolling(window=20).mean()
-    df['MA60'] = df['Close'].rolling(window=60).mean()
-    
+    """가격 라인 차트 - 백엔드 데이터 연동 필요"""
+    # TODO: 백엔드에서 실제 가격 데이터를 받아와야 함
     fig = go.Figure()
-    
-    fig.add_trace(go.Scatter(
-        x=df['Date'], y=df['Close'], name='종가',
-        mode='lines',
-        line=dict(color='#0F172A', width=2)
-    ))
-    
-    fig.add_trace(go.Scatter(
-        x=df['Date'], y=df['MA20'], name='20일 이평선',
-        line=dict(color='#F59E0B', width=1.5)
-    ))
-    
-    fig.add_trace(go.Scatter(
-        x=df['Date'], y=df['MA60'], name='60일 이평선',
-        line=dict(color='#64748B', width=1.5, dash='dot')
-    ))
-    
+    fig.add_annotation(
+        text="가격 데이터 연동 필요",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=16, color="gray")
+    )
     fig.update_layout(
         height=320,
         margin=dict(l=0, r=0, t=10, b=0),
-        plot_bgcolor='white',
-        hovermode='x unified',
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        plot_bgcolor='white'
     )
     return fig
 
@@ -305,10 +267,10 @@ def main():
     if "analysis" in st.session_state:
         res = st.session_state.analysis
         # llm_output 또는 report 필드 확인 (하위 호환성)
-        llm_data = res.get("llm_output", res.get("report", {}))
+        llm_data = res.get("llm_output") or res.get("report") or {}
         
         company_name = res.get("company_name", res.get("symbol", "Unknown"))
-        current_price = llm_data.get("current_price", res["short_term"].get("pivot_point", 0))
+        current_price = llm_data.get("current_price", res.get("short_term", {}).get("pivot_point", 0))
         
         # 디버그: LLM 데이터 확인 (메인 페이지 상단에 표시)
         with st.expander("🔍 DEBUG - API 응답 구조 확인", expanded=True):

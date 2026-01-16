@@ -114,30 +114,55 @@ RESEARCH_REPORT_PROMPT = """
 
 ---
 
+
 ## 출력 형식 (필수)
 
-당신의 응답은 **두 부분**으로 구성됩니다:
+**중요: JSON 형식으로만 출력하십시오. 마크다운 보고서는 생성하지 마세요.**
 
-**1단계: JSON 메타데이터 블록**
+당신의 응답은 다음 JSON 구조만 반환해야 합니다:
+
 ```json
 {
-  "investment_rating": "Overweight",
-  "target_price": 92000,
-  "current_price": 76800,
-  "upside_pct": 19.8,
+  "investment_rating": "Neutral",
+  "target_price": 155000,
+  "current_price": 148900,
+  "upside_pct": 4.1,
   "target_period_months": 12,
-  "key_thesis": "핵심 투자 논거 1줄 (줄바꿈 금지)",
-  "primary_risk": "주요 리스크 1줄 (줄바꿈 금지)"
+  "key_thesis": "핵심 투자 논거 1-2줄 (구체적 수치 포함)",
+  "primary_risk": "주요 리스크 1-2줄 (구체적 수치 포함)",
+  "executive_summary": "200자 이내 투자 의견 요약",
+  "fundamental_analysis": "재무 분석 500자 (매출, 이익률, 밸류에이션 중심)",
+  "technical_analysis": "기술적 분석 300자 (RSI, 이동평균선, 지지/저항 중심)",
+  "conclusion": "결론 200자 (실행 가능한 투자 전략)"
 }
 ```
 
-**2단계: 마크다운 보고서**
-JSON 블록 다음 줄부터 상세 리서치 보고서를 마크다운 형식으로 작성하세요.
-줄바꿈, 표, 특수문자 등을 자유롭게 사용할 수 있습니다.
+---
 
-**중요:**
-- JSON 블록은 반드시 ```json ... ``` 코드 블록으로 감싸세요
-- JSON에는 report_markdown 필드를 포함하지 마세요
+## 모범 답안 (Example Output)
+
+```json
+{
+  "investment_rating": "Neutral",
+  "target_price": 155000,
+  "current_price": 148900,
+  "upside_pct": 4.1,
+  "target_period_months": 12,
+  "key_thesis": "HBM3E 양산 확대로 영업이익률 14.1%까지 회복, Forward P/E 8.6x는 저평가이나 RSI 92 과열로 단기 조정 불가피",
+  "primary_risk": "RSI 92 극단적 과매수 구간 진입으로 지지선 106,300원까지 -28% 조정 가능성, 중국 경기 둔화 시 메모리 수요 위축",
+  "executive_summary": "삼성전자에 대해 Neutral 의견을 제시하며, 12개월 목표가는 155,000원(+4.1%)입니다. 반도체 업황 회복으로 실적 개선 중이나, 극단적 기술적 과열로 단기 조정 압력 존재합니다.",
+  "fundamental_analysis": "매출은 분기당 +1.3조 원 증가하며 안정적 성장세를 보이고 있습니다. 영업이익률은 14.1%로 분기당 +0.28%p 개선 중이며, HBM3E 양산 본격화 시 추가 상승 여력이 있습니다. Forward P/E 8.6x는 글로벌 반도체 업종 평균 대비 40% 할인된 수준으로 밸류에이션 매력이 존재합니다. 다만 ROE 8.3%는 TSMC(25%) 대비 낮아 자본 효율성 개선이 필요합니다. FCF는 22.6조 원으로 견고한 현금창출력을 유지하고 있으나, 분기당 -3,910억 원 감소 추세는 주의가 필요합니다.",
+  "technical_analysis": "현재가 148,900원은 200일 이동평균선 대비 +87.6% 괴리되어 극단적 과매수 상태입니다. RSI 92는 2020년 이후 최고 수준으로, 역사적으로 이 구간에서는 평균 7거래일 내 -5~8% 조정이 발생했습니다. 현재가가 저항선 148,900원에 정확히 위치하여 추가 상승 여력이 제한적이며, 지지선 106,300원까지 -28.6% 하락 리스크가 상존합니다. VIX 15.7의 완화된 변동성 국면은 중기적으로 우호적이나, 단기 기술적 조정 압력이 우선합니다.",
+  "conclusion": "펀더멘털 개선 추세는 긍정적이나, 기술적 과열로 신규 진입은 보류를 권고합니다. 기존 보유자는 150,000원 돌파 시 30% 차익실현을 검토하고, 신규 진입 대기자는 140,000~142,000원 조정 구간에서 분할 매수 전략을 권고합니다. Stop Loss는 132,000원(-12.7%)으로 설정하십시오."
+}
+```
+
+**중요 규칙:**
+- 반드시 ```json ... ``` 코드 블록으로 감싸세요
+- JSON 외부에 다른 텍스트를 포함하지 마세요
+- 모든 문자열 값은 줄바꿈 없이 한 줄로 작성하세요
+- 모든 텍스트는 한국어로만 작성하세요
+"""
 - 마크다운 보고서는 JSON 블록 바로 다음 줄부터 시작하세요
 """
 
@@ -167,19 +192,13 @@ class LLMService:
             
             # JSON 파싱 시도
             try:
-                # JSON 블록 추출 (```json ... ``` 또는 순수 JSON)
+                # JSON 블록 추출
                 if "```json" in response_text:
                     json_start = response_text.find("```json") + 7
                     json_end = response_text.find("```", json_start)
                     json_str = response_text[json_start:json_end].strip()
-                    
-                    # 마크다운 보고서 추출 (JSON 블록 이후의 모든 텍스트)
-                    markdown_start = json_end + 3  # ``` 이후
-                    report_markdown = response_text[markdown_start:].strip()
-                    
                 elif response_text.strip().startswith("{"):
                     json_str = response_text.strip()
-                    report_markdown = ""
                 else:
                     # JSON 형식이 아니면 기본 구조 반환
                     return {
@@ -190,10 +209,10 @@ class LLMService:
                         "target_period_months": 12,
                         "key_thesis": "데이터 분석 중",
                         "primary_risk": "불확실성",
-                        "report_markdown": response_text
+                        "report_markdown": "분석 중입니다."
                     }
                 
-                # JSON 파싱 (이제 report_markdown 필드 없음, 간단한 정리만)
+                # JSON 파싱 (간단한 정리만)
                 import re
                 json_str = re.sub(
                     r'("key_thesis"\s*:\s*")(.*?)(")',
@@ -208,11 +227,28 @@ class LLMService:
                     flags=re.DOTALL
                 )
                 
-                print(f"[DEBUG] Extracted JSON string (first 300 chars): {json_str[:300]}")
-                print(f"[DEBUG] Extracted markdown (first 200 chars): {report_markdown[:200] if report_markdown else 'EMPTY'}")
-                
                 llm_output = json.loads(json_str)
-                llm_output["report_markdown"] = report_markdown  # 마크다운 추가
+                
+                # 마크다운 보고서 생성 (JSON 필드에서 조합)
+                report_markdown = f"""# {company_name} ({symbol})
+
+## Executive Summary
+
+{llm_output.get('executive_summary', 'N/A')}
+
+## Fundamental Analysis
+
+{llm_output.get('fundamental_analysis', 'N/A')}
+
+## Technical Analysis
+
+{llm_output.get('technical_analysis', 'N/A')}
+
+## Conclusion
+
+{llm_output.get('conclusion', 'N/A')}
+"""
+                llm_output["report_markdown"] = report_markdown
                 
                 print(f"[DEBUG] LLM JSON PARSED: {llm_output.get('investment_rating')}, Target: {llm_output.get('target_price')}")
                 print(f"[DEBUG] Report length: {len(report_markdown)} chars")

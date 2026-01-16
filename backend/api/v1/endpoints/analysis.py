@@ -18,8 +18,8 @@ async def create_analysis(
     """
     분석 실행 API
     """
-    # 실제로는 여기서 DB에 기록하고 비동기 작업을 생성하지만,
-    # 지금은 간단하게 ID만 넘기는 스텁 유지
+    # TODO: DB에 기록하고 비동기 작업 생성
+    # 임시로 고정 ID 반환 (실제로는 DB에서 생성된 ID 사용)
     return {"id": 1, "status": "pending", "symbol": analysis_in.symbol}
 
 @router.get("/{analysis_id}", response_model=AnalysisOut)
@@ -27,7 +27,7 @@ async def get_analysis(
     *,
     db: Session = Depends(deps.get_db),
     analysis_id: int,
-    symbol: str = "AAPL" # 임시로 symbol을 쿼리로 받거나 DB에서 조회해야 함
+    symbol: str  # 쿠리 파라미터로 symbol 필수 입력
 ):
     """
     분석 상태 조회 API
@@ -64,7 +64,53 @@ async def get_analysis(
         "mid_term": mid_res,
         "short_term": short_res
     }
-    llm_output = await llm_service.generate_report(analysis_data)
+    
+    # 캐시 확인: 오늘 날짜로 이미 생성된 보고서가 있는지 확인
+    from datetime import datetime, date
+    from models.report_cache import ReportCache
+    
+    today = date.today()
+    cached_report = db.query(ReportCache).filter(
+        ReportCache.symbol == symbol,
+        ReportCache.report_date >= datetime.combine(today, datetime.min.time()),
+        ReportCache.report_date < datetime.combine(today, datetime.max.time())
+    ).first()
+    
+    if cached_report:
+        print(f"[CACHE HIT] Using cached report for {symbol} from {cached_report.created_at}")
+        llm_output = cached_report.llm_output
+    else:
+        print(f"[CACHE MISS] Generating new report for {symbol}")
+        # 데이터 전처리: LLM에게 인간 친화적 형식으로 변환
+        from services.preprocessing import (
+            preprocess_financial_data,
+            preprocess_technical_data,
+            preprocess_short_term_data
+        )
+        
+        analysis_data_preprocessed = {
+            "symbol": symbol,
+            "company_name": company_name,
+            "long_term": preprocess_financial_data(long_res),
+            "mid_term": preprocess_technical_data(mid_res),
+            "short_term": preprocess_short_term_data(short_res)
+        }
+        
+        llm_output = await llm_service.generate_report(analysis_data_preprocessed)
+        
+        # 캐시 저장
+        try:
+            cache_entry = ReportCache(
+                symbol=symbol,
+                report_date=datetime.now(),
+                llm_output=llm_output
+            )
+            db.add(cache_entry)
+            db.commit()
+            print(f"[CACHE SAVED] Report cached for {symbol}")
+        except Exception as e:
+            print(f"[CACHE ERROR] Failed to save cache: {e}")
+            db.rollback()
     
     return {
         "id": analysis_id,
