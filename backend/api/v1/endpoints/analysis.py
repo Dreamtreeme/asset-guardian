@@ -54,15 +54,20 @@ async def get_analysis(
         }
 
     # 4. LLM 보고서 생성
+    # 종목 코드를 실제 회사 이름으로 치환 (정보가 있는 경우)
+    company_name = td.info.get("longName") or td.info.get("shortName") or symbol
+    
     analysis_data = {
         "symbol": symbol,
+        "company_name": company_name,
         "long_term": long_res,
         "mid_term": mid_res,
         "short_term": short_res
     }
-    report = await llm_service.generate_report(analysis_data)
+    llm_output = await llm_service.generate_report(analysis_data)
     
     return {
+
         "id": analysis_id,
         "status": "completed",
         "symbol": symbol,
@@ -90,5 +95,6 @@ async def get_analysis(
             "s2": short_res.get("evidence", {}).get("금일피봇", {}).get("S1", 0) * 0.98,
             "message": f"단기 전망: {short_res.get('outlook', 'N/A')}"
         },
-        "report": report
+        "llm_output": llm_output
     }
+

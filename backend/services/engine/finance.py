@@ -116,6 +116,12 @@ def analyze_long_term(td: TickerData) -> Dict[str, Any]:
         "priceToBook": safe_first(info, "priceToBook"),
         "trailingPEG": safe_first(info, "trailingPegRatio", "trailingPEG"),
         "marketCap": safe_first(info, "marketCap"),
+        # Efficiency
+        "ROE": safe_first(info, "returnOnEquity"),
+        "ROA": safe_first(info, "returnOnAssets"),
+        # Liquidity
+        "currentRatio": safe_first(info, "currentRatio"),
+        "quickRatio": safe_first(info, "quickRatio"),
     }
 
     price_ok = (
