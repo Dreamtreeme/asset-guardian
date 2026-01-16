@@ -745,6 +745,14 @@ def main():
         
         # 전문 리서치 보고서 섹션
         st.markdown("---")
+        st.markdown('<div class="section-title">전문 리서치 리포트</div>', unsafe_allow_html=True)
+        
+        report_text = llm_data.get("report_markdown", "보고서 생성 중...")
+        st.markdown(f'<div class="report-container">{report_text}</div>', unsafe_allow_html=True)
+        
+        # 디버그 뷰 추가
+        st.markdown("---")
+        render_llm_debug(llm_data)
         st.markdown('<div class="section-title">전문 리서치 보고서</div>', unsafe_allow_html=True)
         report_text = llm_data.get("report_markdown", "보고서가 생성되지 않았습니다.")
         st.markdown(f'<div class="report-container">{report_text}</div>', unsafe_allow_html=True)
