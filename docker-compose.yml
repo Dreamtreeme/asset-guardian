@@ -34,11 +34,10 @@ services:
       - "443:443"
     volumes:
       - ./nginx:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt:ro # 인증서 경로 공유 (읽기 전용)
     depends_on:
       - frontend
       - backend
-    networks:
-      - asset-guardian-network
 
 volumes:
   postgres_data:
