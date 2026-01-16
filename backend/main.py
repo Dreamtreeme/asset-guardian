@@ -1,6 +1,13 @@
 from fastapi import FastAPI
 from api.v1.api import api_router
 from core.config import settings
+from init_db import init_db
+
+# 데이터베이스 초기화
+try:
+    init_db()
+except Exception as e:
+    print(f"[WARNING] DB initialization failed: {e}")
 
 app = FastAPI(title=settings.PROJECT_NAME, openapi_url=f"{settings.API_V1_STR}/openapi.json")
 
