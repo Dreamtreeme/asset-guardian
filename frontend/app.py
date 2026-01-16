@@ -266,12 +266,21 @@ def main():
     if "analysis" in st.session_state:
         res = st.session_state.analysis
         
+        print(f"[FRONTEND DEBUG] API response keys: {list(res.keys())}")
+        print(f"[FRONTEND DEBUG] llm_output in response: {'llm_output' in res}")
+        
         # llm_output 명시적 체크 (빈 딕셔너리도 유효한 값)
         llm_data = res.get("llm_output")
+        print(f"[FRONTEND DEBUG] llm_data after get: type={type(llm_data)}, is_none={llm_data is None}")
+        
         if llm_data is None:
             llm_data = res.get("report", {})
+            print(f"[FRONTEND DEBUG] Used fallback to 'report' field")
         if not isinstance(llm_data, dict):
             llm_data = {}
+            print(f"[FRONTEND DEBUG] llm_data was not dict, reset to empty")
+        
+        print(f"[FRONTEND DEBUG] Final llm_data keys: {list(llm_data.keys()) if isinstance(llm_data, dict) else 'N/A'}")
         
         company_name = res.get("company_name", res.get("symbol", "Unknown"))
         current_price = llm_data.get("current_price", res.get("short_term", {}).get("pivot_point", 0))
