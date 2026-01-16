@@ -53,6 +53,8 @@ class DataCollector:
         q_cf = _safe_df(lambda: tk.quarterly_cashflow)
         q_bs = _safe_df(lambda: tk.quarterly_balance_sheet)
 
+        print(f"[DEBUG] FETCHED {tkr}: PX_10Y={len(px_10y)} rows, INFO={'Yes' if info else 'No'}, FIN={'Yes' if q_fin is not None else 'No'}, CF={'Yes' if q_cf is not None else 'No'}, BS={'Yes' if q_bs is not None else 'No'}")
+
         return TickerData(ticker=tkr, px_10y=px_10y, info=info, q_fin=q_fin, q_cf=q_cf, q_bs=q_bs)
 
 collector = DataCollector()

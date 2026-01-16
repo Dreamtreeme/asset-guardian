@@ -106,6 +106,8 @@ class LLMService:
         symbol = analysis_data.get("symbol")
         data_context = json.dumps(analysis_data, indent=2, ensure_ascii=False)
         
+        print(f"\n{'='*50}\n[DEBUG] LLM REQUEST FOR {symbol}\n{data_context}\n{'='*50}")
+
         try:
             message = await self.client.messages.create(
                 model="claude-3-5-sonnet-20241022",
@@ -118,7 +120,9 @@ class LLMService:
                     }
                 ]
             )
-            return message.content[0].text
+            response_text = message.content[0].text
+            print(f"\n[DEBUG] LLM RESPONSE RECEIVED ({len(response_text)} chars)\n{response_text[:200]}...\n{'='*50}")
+            return response_text
         except Exception as e:
             return f"보고서 생성 중 오류 발생: {str(e)}"
 
