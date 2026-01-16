@@ -196,6 +196,13 @@ class LLMService:
                     json_str,
                     flags=re.DOTALL
                 )
+                # report_markdown 필드의 줄바꿈을 \\n으로 이스케이프
+                json_str = re.sub(
+                    r'("report_markdown"\s*:\s*")(.*?)("(?=\s*\}))',
+                    lambda m: m.group(1) + m.group(2).replace('\n', '\\n').replace('\r', '') + m.group(3),
+                    json_str,
+                    flags=re.DOTALL
+                )
                 
                 print(f"[DEBUG] 정리된 JSON (first 500 chars): {json_str[:500]}")
                 
