@@ -88,6 +88,9 @@ async def get_analysis(
         
         if cached_report:
             llm_output = cached_report.llm_output
+    except Exception:
+        pass
+
     # 리스크 지표 계산
     import numpy as np
     var_5_pct = 0
