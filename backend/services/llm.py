@@ -247,9 +247,10 @@ class LLMService:
                 return llm_output
                 
             except json.JSONDecodeError as e:
-
+                pass
             
         except Exception as e:
+            pass
 
         
         # 기본 응답 (파싱 실패 또는 예외 발생 시)

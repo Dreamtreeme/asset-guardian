@@ -88,15 +88,12 @@ async def get_analysis(
         
         if cached_report:
             llm_output = cached_report.llm_output
-
-        else:
-
     except Exception as cache_err:
+        pass
 
     
     # LLM 호출 및 캐시 저장
     if llm_output is None:
-
         analysis_data_preprocessed = {
             "symbol": symbol,
             "company_name": company_name,
@@ -118,7 +115,6 @@ async def get_analysis(
             db.commit()
 
         except Exception as save_err:
-
             db.rollback()
     
 
