@@ -76,7 +76,7 @@ async def get_analysis(
     
     llm_output = None
     today = date.today()
-    print(f"[DEBUG] Starting LLM/Cache flow for {symbol}")
+
     
     # 캐시 확인
     try:
@@ -88,15 +88,15 @@ async def get_analysis(
         
         if cached_report:
             llm_output = cached_report.llm_output
-            print(f"[DEBUG] Cache HIT - llm_output type: {type(llm_output)}, keys: {list(llm_output.keys()) if isinstance(llm_output, dict) else 'N/A'}")
+
         else:
-            print(f"[DEBUG] Cache MISS - will call LLM")
+
     except Exception as cache_err:
-        print(f"[DEBUG] Cache error: {cache_err}")
+
     
     # LLM 호출 및 캐시 저장
     if llm_output is None:
-        print(f"[DEBUG] Calling LLM for {symbol}")
+
         analysis_data_preprocessed = {
             "symbol": symbol,
             "company_name": company_name,
@@ -106,7 +106,7 @@ async def get_analysis(
         }
         
         llm_output = await llm_service.generate_report(analysis_data_preprocessed)
-        print(f"[DEBUG] LLM returned - type: {type(llm_output)}, keys: {list(llm_output.keys()) if isinstance(llm_output, dict) else 'N/A'}")
+
         
         # 캐시 저장
         try:
@@ -116,12 +116,12 @@ async def get_analysis(
                 llm_output=llm_output
             ))
             db.commit()
-            print(f"[DEBUG] Cache saved successfully")
+
         except Exception as save_err:
-            print(f"[DEBUG] Cache save failed: {save_err}")
+
             db.rollback()
     
-    print(f"[DEBUG] Before return - llm_output type: {type(llm_output)}, keys: {list(llm_output.keys()) if isinstance(llm_output, dict) else 'N/A'}")
+
     
     # 응답 데이터 구조화 (가독성 개선)
     long_evidence = long_res.get("evidence", {})
@@ -143,8 +143,43 @@ async def get_analysis(
             "fundamental_trend": long_evidence.get("판정", "N/A"),
             "revenue_slope": long_trends.get("매출", {}).get("기울기"),
             "peg_ratio": long_valuation.get("trailingPEG", 0),
+            "roe": long_valuation.get("ROE", 0),
+            "current_ratio": long_valuation.get("currentRatio", 0),
             "valuation_status": long_res.get("outlook", "N/A"),
-            "message": f"재무 판정: {long_evidence.get('판정', 'N/A')}, {long_res.get('outlook', 'N/A')}"
+            "message": f"재무 판정: {long_evidence.get('판정', 'N/A')}, {long_res.get('outlook', 'N/A')}",
+            
+            # 차트용 재무 추세 데이터
+            "financial_trends": long_trends,
+            
+            # 차트용 가격 데이터 (최근 1년)
+            "price_history": {
+                "dates": [str(d) for d in td.px_10y.index[-252:].tolist()],  # 최근 1년
+                "close": td.px_10y["Close"].iloc[-252:].tolist()
+            } if hasattr(td, 'px_10y') and not td.px_10y.empty else {},
+            
+            # 리스크 지표 계산
+            if hasattr(td, 'px_10y') and not td.px_10y.empty:
+                # 일간 수익률 계산
+                daily_returns = td.px_10y["Close"].pct_change().dropna()
+                
+                # VaR 5% (하위 5% 분위수)
+                var_5_pct = float(daily_returns.quantile(0.05) * 100) if len(daily_returns) > 0 else 0
+                
+                # 연간 변동성 (일간 표준편차 × √252)
+                import numpy as np
+                volatility = float(daily_returns.std() * np.sqrt(252) * 100) if len(daily_returns) > 0 else 0
+            else:
+                var_5_pct = 0
+                volatility = 0
+            
+            "risk_metrics": {
+                "max_drawdown_5y": long_evidence.get("장기추세", {}).get("최근5년_MDD", 0),
+                "var_5_pct": var_5_pct,
+                "volatility": volatility
+            },
+            
+            # 장기 이평선 데이터
+            "price_block": long_evidence.get("장기추세", {})
         },
         "mid_term": {
             "ma_trend": mid_res.get("outlook", "N/A"),

@@ -79,24 +79,57 @@ RESEARCH_REPORT_PROMPT = """
 ```
 
 ### 3. short_term (단기 전술)
-```json
-{
-  "evidence": {
-    "전일": {
-      "거래량배수": 1.22,             // 20일 평균 대비 배수
-      "갭": 0.0097,                   // 시가갭 (0.0097 = +0.97%)
-      "캔들바디": 0.0248              // 종가-시가 (0.0248 = +2.48%)
-    },
-    "금일피봇": {
-      "Pivot": 147566.67,
-      "R1": 150833.33,                // 1차 저항
-      "S1": 145633.33                 // 1차 지지
-    },
-    "RSI": 92.0
-  },
-  "outlook": "단기 중립"
-}
-```
+## 역할 (Role)
+
+당신은 **대형 증권사의 Senior Equity Analyst**입니다.
+기관투자자를 위한 투자의견서를 작성하십시오.
+
+---
+
+## 작성 규칙 (Writing Guidelines)
+
+### 1. Tone & Style
+- **공식적 어투 사용**: "~입니다", "~것으로 판단됩니다", "~전망입니다"
+- **객관적 서술 유지**: 감정적 표현 지양
+- **구어체 금지**: "~해요", "~네요" 등 사용 금지
+- **전문 용어 활용**: PEG, ROE, QoQ, MDD 등 금융 용어 적극 사용
+
+### 2. 투자의견 (Investment Rating)
+- 반드시 다음 중 하나 선택: **BUY** / **HOLD** / **REDUCE**
+- 목표주가 산출 근거 명시 (PEG, DCF 등)
+- 상승여력(Upside) 계산 제시
+
+### 3. 분석 구조
+**a) Investment Summary (투자의견 요약)**
+- 3-4줄로 핵심 투자 포인트 요약
+- "동사는 ~" 형식으로 시작
+- 투자의견을 명확히 제시
+
+**b) Key Thesis (주요 논거)**
+- 투자 의견을 뒷받침하는 3가지 핵심 근거
+- 정량적 지표 포함 (매출 성장률, 이익률 등)
+
+**c) Primary Risk (주요 리스크)**
+- 업종 리스크, 기업 고유 리스크 균형있게 제시
+- 구체적 수치 포함 (MDD, 변동성 등)
+
+**d) Detailed Analysis**
+- Fundamental: 재무제표 분석 (매출, 이익률, 밸류에이션)
+- Technical: 차트 분석 (RSI, 이동평균선)
+
+---
+
+## 데이터 분석 지침
+
+### 재무 분석
+- QoQ 성장률 = (최신값 - 이전값) / 이전값 × 100
+- 영업이익률 개선 추세 확인
+- PEG Ratio < 1: 저평가, 1~2: 적정, > 2: 고평가
+
+### 기술적 분석
+- RSI > 70: 과매수, < 30: 과매도
+- 200일선 대비 괴리율 확인
+- MDD는 투자자 리스크 허용도 판단 근거
 
 ---
 
@@ -105,61 +138,41 @@ RESEARCH_REPORT_PROMPT = """
 ### Section 1: Executive Summary (3-4줄)
 
 **필수 포함 요소:**
-1. 투자의견: **Overweight** / **Neutral** / **Underweight**
-2. 목표가: "현재가 ₩XXX → 목표가 ₩YYY (+ZZ%, N개월)"
+1. 투자의견: **BUY** / **HOLD** / **REDUCE**
+2. 목표가: "목표주가 ₩XXX,XXX (+ZZ%, 12개월)"
 3. 핵심 논거 1개 (가장 강력한 수치 근거)
 4. 리스크 요약 1줄
 
-**보고서 길이:** 최대 500단어 이내로 간결하게 작성
+**예시:**
+"동사는 분기 매출 1.5% 성장세를 지속하는 가운데 영업이익률 개선이 동반되며 질적 성장(Quality Growth)을 시현하고 있습니다. 규모의 경제 효과가 가시화되고 있는 것으로 판단되며, 목표주가 155,000원(상승여력 +4.1%)으로 투자의견 '매수(BUY)'를 제시합니다."
 
 ---
 
-
 ## 출력 형식 (필수)
 
-**중요: JSON 형식으로만 출력하십시오. 마크다운 보고서는 생성하지 마세요.**
+**중요: JSON 형식으로만 출력하십시오.**
 
 당신의 응답은 다음 JSON 구조만 반환해야 합니다:
 
 ```json
 {
-  "investment_rating": "Neutral",
+  "investment_rating": "BUY",
   "target_price": 155000,
   "current_price": 148900,
   "upside_pct": 4.1,
   "target_period_months": 12,
-  "key_thesis": "핵심 투자 논거 1-2줄 (구체적 수치 포함)",
-  "primary_risk": "주요 리스크 1-2줄 (구체적 수치 포함)",
-  "executive_summary": "200자 이내 투자 의견 요약",
-  "fundamental_analysis": "재무 분석 500자 (매출, 이익률, 밸류에이션 중심)",
-  "technical_analysis": "기술적 분석 300자 (RSI, 이동평균선, 지지/저항 중심)",
-  "conclusion": "결론 200자 (실행 가능한 투자 전략)"
-}
-```
-
----
-
-## 모범 답안 (Example Output)
-
-```json
-{
-  "investment_rating": "Neutral",
-  "target_price": 155000,
-  "current_price": 148900,
-  "upside_pct": 4.1,
-  "target_period_months": 12,
-  "key_thesis": "영업이익률 14.1% 회복 추세, Forward P/E 8.6x는 업종 평균 대비 저평가이나 RSI 92 극단적 과매수로 단기 조정 불가피",
-  "primary_risk": "RSI 92 과매수 구간 진입으로 지지선까지 -28% 조정 가능성, 최근 5년 MDD -45% 이력상 변동성 확대 시 급락 리스크",
-  "executive_summary": "중립 의견으로 12개월 목표가 155,000원(+4.1%)을 제시합니다. 영업이익률 개선 추세는 긍정적이나 기술적 과열로 단기 조정 압력이 존재합니다.",
-  "fundamental_analysis": "매출은 분기당 +1.3조 원 증가하며 안정적 성장세를 보이고 있습니다. 영업이익률은 14.1%로 분기당 +0.28%p 개선 중입니다. Forward P/E 8.6x는 글로벌 반도체 업종 평균 대비 40% 할인된 수준입니다. ROE 8.3%는 개선이 필요하며, FCF는 22.6조 원으로 견고하나 분기당 -3,910억 원 감소 추세입니다.",
-  "technical_analysis": "현재가는 200일 이동평균선 대비 +87.6% 괴리되어 극단적 과매수 상태입니다. RSI 92는 역사적 최고 수준으로 평균 7거래일 내 조정이 예상됩니다. 저항선 도달로 추가 상승 여력이 제한적이며, 지지선까지 -28.6% 하락 리스크가 상존합니다.",
-  "conclusion": "펀더멘털 개선은 긍정적이나 기술적 과열로 신규 진입은 보류를 권고합니다. 기존 보유자는 150,000원 돌파 시 30% 차익실현을 검토하고, 신규 진입은 140,000원 조정 구간에서 분할 매수를 권고합니다."
+  "key_thesis": "1) 분기 매출 QoQ +1.5% 성장 지속, 2) 영업이익률 14.1% 회복 (+0.3%p 개선), 3) PEG 1.15로 적정 밸류에이션 구간",
+  "primary_risk": "업종 내 경쟁 심화에 따른 마진 압박 가능성과 원자재 가격 변동성이 주요 리스크 요인입니다. 5년 MDD -45%는 고변동성 구간으로 급락 시 심리적 부담이 클 수 있습니다.",
+  "executive_summary": "동사는 분기 매출 1.5% 성장세를 지속하는 가운데 영업이익률 개선이 동반되며 질적 성장을 시현하고 있습니다. 규모의 경제 효과가 가시화되고 있는 것으로 판단되며, 목표주가 155,000원(상승여력 +4.1%)으로 투자의견 '매수'를 제시합니다.",
+  "fundamental_analysis": "최근 분기 매출액 86.1조 원으로 전분기 대비 1.5% 성장하였으며, 영업이익률은 14.1%로 전분기 대비 0.3%p 개선되었습니다. 이는 규모의 경제 효과로 고정비 부담이 완화된 것으로 분석됩니다. PEG Ratio 1.15는 적정 밸류에이션 구간에 위치해 있습니다.",
+  "technical_analysis": "RSI 52로 중립 구간에 위치해 있으며, 200일 이동평균선을 상회하며 장기 상승 추세를 유지하고 있습니다. 다만 단기 과열 가능성에 유의가 필요합니다.",
+  "conclusion": "동사의 안정적인 성장세와 수익성 개선을 고려할 때 목표주가 155,000원으로 투자의견 '매수(BUY)'를 유지합니다. 단, 업종 경쟁 심화와 변동성 확대 리스크에 유의하여 분할 매수 전략을 권고합니다.",
+  "report_markdown": "[자동 생성]"
 }
 ```
 
 **중요 규칙:**
 - 반드시 ```json ... ``` 코드 블록으로 감싸세요
-- JSON 외부에 다른 텍스트를 포함하지 마세요
 - 모든 문자열 값은 줄바꿈 없이 한 줄로 작성하세요
 - 모든 텍스트는 한국어로만 작성하세요
 - **제공된 데이터에 기반한 분석만 작성하세요 (추측/예측 금지)**
@@ -187,7 +200,7 @@ class LLMService:
                 ]
             )
             response_text = message.content[0].text
-            print(f"[LLM DEBUG] Response length: {len(response_text)} chars")
+
             
             # JSON 파싱
             try:
@@ -196,17 +209,13 @@ class LLMService:
                     json_start = response_text.find("```json") + 7
                     json_end = response_text.find("```", json_start)
                     json_str = response_text[json_start:json_end].strip()
-                    print(f"[LLM DEBUG] Found JSON block, length: {len(json_str)}")
-                elif response_text.strip().startswith("{"):
-                    json_str = response_text.strip()
-                    print(f"[LLM DEBUG] Raw JSON, length: {len(json_str)}")
                 else:
-                    print(f"[LLM DEBUG] No JSON found in response")
+                    json_str = response_text
                     raise ValueError("Invalid response format")
                 
                 # 파싱 및 정리
                 llm_output = json.loads(json_str)
-                print(f"[LLM DEBUG] JSON parsed successfully, keys: {list(llm_output.keys())}")
+
                 
                 # 문자열 필드 정리
                 for key in ['key_thesis', 'primary_risk']:
@@ -234,17 +243,17 @@ class LLMService:
 """
                 llm_output["report_markdown"] = report_markdown
                 
-                print(f"[LLM DEBUG] Returning successful response with {len(llm_output)} fields")
+
                 return llm_output
                 
             except json.JSONDecodeError as e:
-                print(f"[LLM ERROR] JSON parsing failed: {e}")
+
             
         except Exception as e:
-            print(f"[LLM ERROR] Exception in generate_report: {type(e).__name__}: {e}")
+
         
         # 기본 응답 (파싱 실패 또는 예외 발생 시)
-        print(f"[LLM ERROR] Returning fallback response")
+
         return {
             "investment_rating": "Neutral",
             "target_price": 0,
