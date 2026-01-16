@@ -1,13 +1,27 @@
--- 0) 스키마 (선택)
 CREATE SCHEMA IF NOT EXISTS market;
 
--- 1) 유니버스 스냅샷(너가 긁어온 원본 저장용)
+-- 1) 자산 마스터: 이름만 있어도 생성 가능
+CREATE TABLE IF NOT EXISTS market.assets (
+  asset_id    bigserial PRIMARY KEY,
+  name_ko     text NOT NULL UNIQUE,     -- "삼성전자"
+  ticker      text UNIQUE,              -- "005930.KS" (없어도 됨)
+  exchange    text,
+  currency    text DEFAULT 'KRW',
+  sector_key  text,
+  industry    text,
+  isin        text,
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_assets_ticker ON market.assets(ticker);
+
+-- 2) 유니버스 스냅샷(원본 보관)
 CREATE TABLE IF NOT EXISTS market.universe_snapshot_kr_top50 (
   as_of_date date NOT NULL,
   rank       int  NOT NULL,
   name_ko    text NOT NULL,
+  asset_id   bigint REFERENCES market.assets(asset_id),
 
-  -- 아래는 있으면 넣고 없으면 NULL
   price_krw        numeric,
   change_krw       numeric,
   pct_change       numeric,
@@ -18,55 +32,31 @@ CREATE TABLE IF NOT EXISTS market.universe_snapshot_kr_top50 (
   pbr              numeric,
 
   raw_row text,
-
   PRIMARY KEY (as_of_date, rank)
 );
 
-CREATE INDEX IF NOT EXISTS idx_universe_top50_date ON market.universe_snapshot_kr_top50(as_of_date);
+CREATE INDEX IF NOT EXISTS idx_universe_asset ON market.universe_snapshot_kr_top50(asset_id);
 
-
--- 2) 종목 마스터(분석 엔진의 기준키)
-CREATE TABLE IF NOT EXISTS market.tickers (
-  ticker        text PRIMARY KEY,    -- 예: 005930.KS
-  code_krx      text UNIQUE,          -- 예: 005930
-  name_ko       text NOT NULL,
-  exchange      text NOT NULL DEFAULT 'KRX-KOSPI',
-  currency      text NOT NULL DEFAULT 'KRW',
-
-  -- 가능하면 채워두면 섹터 매핑 정확도↑
-  sector_key    text,
-  industry      text,
-
-  -- yfinance/기타에서 가져올 수 있는 메타
-  isin         text,
-  updated_at   timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX IF NOT EXISTS idx_tickers_name ON market.tickers(name_ko);
-
-
--- 3) 일봉 가격(OHLCV)
+-- 3) 가격(OHLCV): asset_id로 연결. ticker 없어도 asset_id만 있으면 저장 가능
 CREATE TABLE IF NOT EXISTS market.prices_daily (
-  ticker   text NOT NULL REFERENCES market.tickers(ticker),
-  date     date NOT NULL,
-  open     numeric,
-  high     numeric,
-  low      numeric,
-  close    numeric,
+  asset_id  bigint NOT NULL REFERENCES market.assets(asset_id),
+  date      date NOT NULL,
+  open      numeric,
+  high      numeric,
+  low       numeric,
+  close     numeric,
   adj_close numeric,
-  volume   bigint,
-  source   text NOT NULL DEFAULT 'yfinance',
+  volume    bigint,
+  source    text NOT NULL DEFAULT 'yfinance',
   updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (ticker, date)
+  PRIMARY KEY (asset_id, date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_prices_date ON market.prices_daily(date);
-CREATE INDEX IF NOT EXISTS idx_prices_ticker ON market.prices_daily(ticker);
 
-
--- 4) 매크로/지수 시계열(일봉)
+-- 4) 매크로/지수(일봉)
 CREATE TABLE IF NOT EXISTS market.series_daily (
-  series_id text NOT NULL,           -- 예: KOSPI, VIX, DXY, KRWUSD
+  series_id text NOT NULL, -- KOSPI, VIX, DXY, KRWUSD...
   date      date NOT NULL,
   open      numeric,
   high      numeric,
@@ -79,12 +69,9 @@ CREATE TABLE IF NOT EXISTS market.series_daily (
   PRIMARY KEY (series_id, date)
 );
 
-CREATE INDEX IF NOT EXISTS idx_series_date ON market.series_daily(date);
-
-
--- 5) 분기 재무(선택/권장) - 손익
+-- 5) 분기 재무(선택): asset_id 기준
 CREATE TABLE IF NOT EXISTS market.financials_q_is (
-  ticker     text NOT NULL REFERENCES market.tickers(ticker),
+  asset_id   bigint NOT NULL REFERENCES market.assets(asset_id),
   period_end date NOT NULL,
   revenue            numeric,
   operating_income   numeric,
@@ -92,41 +79,43 @@ CREATE TABLE IF NOT EXISTS market.financials_q_is (
   currency text NOT NULL DEFAULT 'KRW',
   source   text NOT NULL DEFAULT 'yfinance',
   updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (ticker, period_end)
+  PRIMARY KEY (asset_id, period_end)
 );
 
--- 6) 분기 재무 - 현금흐름
 CREATE TABLE IF NOT EXISTS market.financials_q_cf (
-  ticker     text NOT NULL REFERENCES market.tickers(ticker),
+  asset_id   bigint NOT NULL REFERENCES market.assets(asset_id),
   period_end date NOT NULL,
   operating_cf numeric,
   capex        numeric,
   currency text NOT NULL DEFAULT 'KRW',
   source   text NOT NULL DEFAULT 'yfinance',
   updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (ticker, period_end)
+  PRIMARY KEY (asset_id, period_end)
 );
 
--- 7) 분기 재무 - 재무상태표
 CREATE TABLE IF NOT EXISTS market.financials_q_bs (
-  ticker     text NOT NULL REFERENCES market.tickers(ticker),
+  asset_id   bigint NOT NULL REFERENCES market.assets(asset_id),
   period_end date NOT NULL,
   total_debt  numeric,
   total_equity numeric,
   currency text NOT NULL DEFAULT 'KRW',
   source   text NOT NULL DEFAULT 'yfinance',
   updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (ticker, period_end)
+  PRIMARY KEY (asset_id, period_end)
 );
 
-
--- 8) 섹터 ETF 후보(거래량 1등 자동 선택용)
-CREATE TABLE IF NOT EXISTS market.sector_etf_candidates (
-  market     text NOT NULL,        -- 'KR' / 'US'
-  sector_key text NOT NULL,        -- IT, FINANCIAL, HEALTHCARE, BROAD...
-  etf_ticker text NOT NULL,        -- 예: 363580.KS / XLK
-  priority   int  NOT NULL DEFAULT 100,
-  PRIMARY KEY (market, sector_key, etf_ticker)
+-- 6) 티커 매핑 시도 기록(나중에 재시도/디버깅 편함)
+CREATE TABLE IF NOT EXISTS market.ticker_resolution_log (
+  id bigserial PRIMARY KEY,
+  name_ko text NOT NULL,
+  attempted_at timestamptz NOT NULL DEFAULT now(),
+  query text NOT NULL,
+  result_ticker text,
+  result_name text,
+  result_exchange text,
+  score numeric,
+  status text NOT NULL, -- 'matched' / 'failed'
+  raw jsonb
 );
 
-CREATE INDEX IF NOT EXISTS idx_sector_etf ON market.sector_etf_candidates(market, sector_key);
+CREATE INDEX IF NOT EXISTS idx_resolve_name ON market.ticker_resolution_log(name_ko);
