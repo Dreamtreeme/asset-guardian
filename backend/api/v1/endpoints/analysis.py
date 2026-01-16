@@ -67,10 +67,10 @@ async def get_analysis(
     llm_output = await llm_service.generate_report(analysis_data)
     
     return {
-
         "id": analysis_id,
         "status": "completed",
         "symbol": symbol,
+        "company_name": company_name,
         "long_term": {
             "fundamental_trend": long_res.get("evidence", {}).get("판정", "N/A"),
             "revenue_slope": long_res.get("evidence", {}).get("재무추세", {}).get("매출", {}).get("기울기"),

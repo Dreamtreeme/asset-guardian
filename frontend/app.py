@@ -188,7 +188,7 @@ def render_header(symbol, company_name, price_val):
         c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
         with c1:
             st.markdown(f'<div class="header-title">{company_name} ({symbol})</div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="header-meta">기관투자자용 리서치 | {datetime.today().strftime("%Y-%m-%d")}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="header-meta">주식 분석 리서치 | {datetime.today().strftime("%Y-%m-%d")}</div>', unsafe_allow_html=True)
         with c2:
             st.metric(label="현재가", value=f"{price_val:,.0f} 원")
         st.markdown("---")
@@ -216,7 +216,8 @@ def render_summary(llm_data):
 def render_fundamental(long_data, llm_data):
     st.markdown('<div class="section-title">1. 재무 분석 (장기)</div>', unsafe_allow_html=True)
     
-    c1, c2 = st.columns([1.5, 1], gap="large")
+    # 재무 추세 차트와 해석을 좌우로 배치
+    c1, c2 = st.columns([1, 1], gap="large")
     
     with c1:
         st.plotly_chart(plot_financial_trends(), use_container_width=True)
@@ -224,16 +225,14 @@ def render_fundamental(long_data, llm_data):
     with c2:
         st.markdown(f"""
         <div class="insight-box">
-            <h4>LLM 해석</h4>
-            <p>{llm_data.get('key_thesis', '재무 추세 분석 중...')}</p>
-            <hr>
-            <b>매출 기울기:</b> {long_data.get('revenue_slope', 0):.2f}<br>
-            <b>PEG Ratio:</b> {long_data.get('peg_ratio', 0):.2f}<br>
-            <b>종합 의견:</b> {long_data.get('valuation_status', 'N/A')}
+            <p style="font-size: 15px; line-height: 1.6;">{llm_data.get('key_thesis', '재무 추세 분석 중...')}</p>
         </div>
         """, unsafe_allow_html=True)
-        
-        # 밸류에이션 막대 차트
+    
+    # 밸류에이션 막대 차트와 지표를 좌우로 배치
+    c3, c4 = st.columns([1, 1], gap="large")
+    
+    with c3:
         evidence = long_data.get("evidence", {}) if "evidence" in str(long_data) else {}
         valuation = evidence.get("밸류에이션", {}) if evidence else {}
         peg = valuation.get("trailingPEG") or long_data.get('peg_ratio', 0)
@@ -241,27 +240,44 @@ def render_fundamental(long_data, llm_data):
         current_ratio = valuation.get("currentRatio", 0)
         
         st.plotly_chart(plot_valuation_bars(peg, roe, current_ratio), use_container_width=True)
+    
+    with c4:
+        st.markdown(f"""
+        <div class="insight-box">
+            <b>PEG Ratio:</b> {peg:.2f}<br>
+            <b>ROE:</b> {roe*100:.1f}%<br>
+            <b>유동비율:</b> {current_ratio:.2f}
+        </div>
+        """, unsafe_allow_html=True)
 
 def render_technical(mid_data, llm_data):
     st.markdown('<div class="section-title">2. 기술적 분석 (중기)</div>', unsafe_allow_html=True)
     
-    c1, c2 = st.columns([1.5, 1], gap="large")
+    # 가격 차트와 해석을 좌우로 배치
+    c1, c2 = st.columns([1, 1], gap="large")
     
     with c1:
         st.plotly_chart(plot_price_chart(), use_container_width=True)
     
     with c2:
-        # RSI 막대 차트
-        rsi_value = mid_data.get('rsi_value', 50)
-        st.plotly_chart(plot_rsi_bar(rsi_value), use_container_width=True)
-        
         st.markdown(f"""
         <div class="insight-box">
-            <h4>LLM 해석</h4>
-            <p>{llm_data.get('primary_risk', '기술적 분석 중...')}</p>
-            <hr>
-            <b>추세:</b> {mid_data.get('ma_trend', 'N/A')}<br>
+            <p style="font-size: 15px; line-height: 1.6;">{llm_data.get('primary_risk', '기술적 분석 중...')}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # RSI 차트와 지표를 좌우로 배치
+    c3, c4 = st.columns([1, 1], gap="large")
+    
+    with c3:
+        rsi_value = mid_data.get('rsi_value', 50)
+        st.plotly_chart(plot_rsi_bar(rsi_value), use_container_width=True)
+    
+    with c4:
+        st.markdown(f"""
+        <div class="insight-box">
             <b>RSI:</b> {rsi_value:.1f}<br>
+            <b>추세:</b> {mid_data.get('ma_trend', 'N/A')}<br>
             <b>의견:</b> {mid_data.get('message', 'N/A')}
         </div>
         """, unsafe_allow_html=True)
@@ -290,23 +306,28 @@ def main():
         res = st.session_state.analysis
         llm_data = res.get("llm_output", {})
         
-        company_name = llm_data.get("company_name", res.get("symbol", "Unknown"))
+        company_name = res.get("company_name", res.get("symbol", "Unknown"))
         current_price = llm_data.get("current_price", res["short_term"].get("pivot_point", 0))
+        
+        # 디버그: LLM 데이터 확인 (메인 페이지 상단에 표시)
+        with st.expander("🔍 DEBUG - API 응답 구조 확인", expanded=True):
+            st.write("**전체 응답 키:**", list(res.keys()))
+            st.write("**llm_output 키:**", list(llm_data.keys()))
+            st.json(llm_data)  # 전체 LLM 데이터 표시
         
         render_header(res["symbol"], company_name, current_price)
         
-        tab1, tab2 = st.tabs(["대시보드 분석", "전문 리서치 보고서"])
+        # 탭 제거, 모든 콘텐츠를 한 페이지에 표시
+        render_summary(llm_data)
+        render_fundamental(res["long_term"], llm_data)
+        render_technical(res["mid_term"], llm_data)
+        render_strategy(res["short_term"])
         
-        with tab1:
-            render_summary(llm_data)
-            render_fundamental(res["long_term"], llm_data)
-            render_technical(res["mid_term"], llm_data)
-            render_strategy(res["short_term"])
-        
-        with tab2:
-            st.markdown('<div class="section-title">기관투자자용 리서치 보고서</div>', unsafe_allow_html=True)
-            report_text = llm_data.get("report_markdown", "보고서가 생성되지 않았습니다.")
-            st.markdown(report_text)
+        # 전문 리서치 보고서 섹션
+        st.markdown("---")
+        st.markdown('<div class="section-title">📄 전문 리서치 보고서</div>', unsafe_allow_html=True)
+        report_text = llm_data.get("report_markdown", "보고서가 생성되지 않았습니다.")
+        st.markdown(report_text)
     else:
         st.info("왼쪽 사이드바에서 종목 코드를 입력하고 [분석 실행] 버튼을 눌러주세요.")
 
