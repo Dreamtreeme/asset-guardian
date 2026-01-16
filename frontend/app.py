@@ -282,7 +282,8 @@ def plot_valuation_indicators(peg, roe, current_ratio):
     # 3. 유동비율
     fig.add_trace(go.Indicator(
         mode = "gauge+number",
-        value = current_ratio,
+        value = current_ratio * 100,
+        number = {'suffix': "%"},
         title = {'text': "유동비율", 'font': {'size': 14}},
         gauge = {
             'axis': {'range': [0, 400]},
