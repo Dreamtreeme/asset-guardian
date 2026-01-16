@@ -62,7 +62,7 @@ def get_real_time_analysis(symbol):
         
         # 2. 결과 조회 (GET)
         analysis_id = 1
-        res_get = requests.get(f"{API_URL}/{analysis_id}?symbol={symbol}", timeout=30)
+        res_get = requests.get(f"{API_URL}/{analysis_id}?symbol={symbol}", timeout=60)
         if res_get.status_code == 200:
             return res_get.json()
         else:

@@ -181,6 +181,22 @@ class LLMService:
                         "report_markdown": response_text
                     }
                 
+                # JSON 정리: 줄바꿈 제거 및 이스케이프 처리
+                import re
+                # key_thesis와 primary_risk 필드의 값에서 줄바꿈 제거
+                json_str = re.sub(
+                    r'("key_thesis"\s*:\s*")(.*?)(")',
+                    lambda m: m.group(1) + m.group(2).replace('\n', ' ').replace('\r', '').strip() + m.group(3),
+                    json_str,
+                    flags=re.DOTALL
+                )
+                json_str = re.sub(
+                    r'("primary_risk"\s*:\s*")(.*?)(")',
+                    lambda m: m.group(1) + m.group(2).replace('\n', ' ').replace('\r', '').strip() + m.group(3),
+                    json_str,
+                    flags=re.DOTALL
+                )
+                
                 llm_output = json.loads(json_str)
                 print(f"[DEBUG] LLM JSON PARSED: {llm_output.get('investment_rating')}, Target: {llm_output.get('target_price')}")
                 return llm_output
