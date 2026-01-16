@@ -114,6 +114,7 @@ def analyze_long_term(td: TickerData) -> Dict[str, Any]:
         "trailingPE": safe_first(info, "trailingPE"),
         "forwardPE": safe_first(info, "forwardPE"),
         "priceToBook": safe_first(info, "priceToBook"),
+        "trailingPEG": safe_first(info, "trailingPegRatio", "trailingPEG"),
         "marketCap": safe_first(info, "marketCap"),
     }
 

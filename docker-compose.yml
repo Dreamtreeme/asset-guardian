@@ -23,12 +23,10 @@ services:
     build: ./frontend
     expose:
       - "8501"
-    entrypoint: ["streamlit", "run", "app.py", 
-                 "--server.port=8501", 
-                 "--server.address=0.0.0.0", 
-                 "--server.enableCORS=false", 
-                 "--server.enableXsrfProtection=false"]
+    entrypoint: [ "streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false" ]
     env_file: .env
+    environment:
+      - BACKEND_URL=${BACKEND_URL:-http://backend:8000/api/v1/analysis}
     depends_on:
       - backend
     networks:
@@ -50,6 +48,7 @@ services:
 
 volumes:
   postgres_data:
+
 
 networks:
   asset-analyzer-network:

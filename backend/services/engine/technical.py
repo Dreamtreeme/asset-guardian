@@ -26,6 +26,14 @@ def recent_support_resistance(close: pd.Series, lookback: int = 20) -> Tuple[flo
     window = close.iloc[-lookback:] if len(close) > lookback else close
     return float(window.min()), float(window.max())
 
+def calculate_rsi(close: pd.Series, period: int = 14) -> float:
+    delta = close.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    rs = gain / (loss + 1e-12)
+    rsi = 100 - (100 / (1 + rs))
+    return float(rsi.iloc[-1])
+
 def analyze_mid_term(td: TickerData) -> Dict[str, Any]:
     close = td.px_10y["Close"].dropna()
     if len(close) < 60: return {"error": "데이터 부족"}
@@ -39,6 +47,8 @@ def analyze_mid_term(td: TickerData) -> Dict[str, Any]:
     support, resistance = recent_support_resistance(close)
     last_close = float(close.iloc[-1])
     rr = (resistance - last_close) / (last_close - support + 1e-12) if last_close > support and resistance > last_close else None
+    
+    rsi_val = calculate_rsi(close)
 
     # 상대성과 (Sector)
     is_kr = td.ticker.endswith(".KS") or td.ticker.endswith(".KQ")
@@ -51,7 +61,8 @@ def analyze_mid_term(td: TickerData) -> Dict[str, Any]:
             "VIX": vix_last,
             "지지선": support,
             "저항선": resistance,
-            "익절_손절비": rr
+            "익절_손절비": rr,
+            "RSI": rsi_val
         },
         "outlook": outlook
     }
@@ -73,6 +84,8 @@ def analyze_short_term(td: TickerData) -> Dict[str, Any]:
     pivot = (y_high + y_low + y_close) / 3
     r1 = 2 * pivot - y_low
     s1 = 2 * pivot - y_high
+    
+    rsi_val = calculate_rsi(px["Close"])
 
     outlook = "단기 강세" if body > 0.02 and vol_mult > 1.5 else "단기 중립"
 
@@ -87,7 +100,8 @@ def analyze_short_term(td: TickerData) -> Dict[str, Any]:
                 "Pivot": pivot,
                 "R1": r1,
                 "S1": s1
-            }
+            },
+            "RSI": rsi_val
         },
         "outlook": outlook
     }

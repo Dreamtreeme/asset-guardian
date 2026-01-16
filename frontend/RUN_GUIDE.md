@@ -38,9 +38,9 @@ Docker가 설치되어 있다면 환경 구축 없이 컨테이너로 실행할 
 
 ```bash
 # 1. 이미지 빌드
-docker build -t asset-guardian-fe ./frontend
+docker build -t asset-analyzer-fe ./frontend
 
 # 2. 컨테이너 실행
-docker run -p 8501:8501 asset-guardian-fe
+docker run -p 8501:8501 asset-analyzer-fe
 ```
 **참고**: 컨테이너 실행 후 동일하게 `http://localhost:8501`에서 확인 가능합니다.

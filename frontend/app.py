@@ -62,9 +62,8 @@ st.markdown("""
 
 def get_real_time_analysis(symbol):
     """백엔드 API 호출"""
-    # Docker 환경에서는 http://backend:8000, 로컬에서는 http://localhost:8000
-    # Nginx를 통한다면 http://localhost/api/v1/analysis
-    API_URL = "http://localhost:8000/v1/analysis" 
+    import os
+    API_URL = os.getenv("BACKEND_URL", "http://localhost:8000/v1/analysis")
     try:
         # 1. 분석 요청 (POST)
         res_post = requests.post(f"{API_URL}/", json={"symbol": symbol}, timeout=10)
@@ -252,10 +251,10 @@ def render_strategy_section(short_data):
         """.format(r1=short_data.get('r1', 0), pv=short_data.get('pivot_point', 0), s1=short_data.get('s1', 0)), unsafe_allow_html=True)
 
 def main():
-    st.sidebar.title("🛡️ Asset Guardian")
+    st.sidebar.title("Asset Analyzer")
     symbol = st.sidebar.text_input("종목 코드 입력", value="005930")
     
-    if st.sidebar.button("🔍 분석 실행"):
+    if st.sidebar.button("분석 실행"):
         with st.spinner("전문 분석 엔진 가동 중..."):
             result = get_real_time_analysis(symbol)
             if result:
@@ -264,10 +263,19 @@ def main():
     if "analysis" in st.session_state:
         res = st.session_state.analysis
         render_header(res["symbol"], res["short_term"].get("pivot_point", 76800))
-        render_summary_card(res)
-        render_fundamental_section(res["long_term"])
-        render_technical_section(res["mid_term"])
-        render_strategy_section(res["short_term"])
+        
+        tab1, tab2 = st.tabs(["Dashboard Analysis", "Professional Research"])
+        
+        with tab1:
+            render_summary_card(res)
+            render_fundamental_section(res["long_term"])
+            render_technical_section(res["mid_term"])
+            render_strategy_section(res["short_term"])
+        
+        with tab2:
+            st.markdown('<div class="section-title">Institutional Equity Research Report</div>', unsafe_allow_html=True)
+            report_text = res.get("report", "보고서가 생성되지 않았습니다.")
+            st.markdown(report_text)
     else:
         st.info("왼쪽 사이드바에서 종목 코드를 입력하고 [분석 실행] 버튼을 눌러주세요.")
 

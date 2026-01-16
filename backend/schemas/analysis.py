@@ -15,6 +15,7 @@ class AnalysisOut(AnalysisBase):
     long_term: Optional[Dict] = None
     mid_term: Optional[Dict] = None
     short_term: Optional[Dict] = None
+    report: Optional[str] = None
 
     class Config:
         from_attributes = True
