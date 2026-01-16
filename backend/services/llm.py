@@ -100,14 +100,14 @@ RESEARCH_REPORT_PROMPT = """
 
 class LLMService:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
     async def generate_report(self, analysis_data: dict) -> str:
         symbol = analysis_data.get("symbol")
         data_context = json.dumps(analysis_data, indent=2, ensure_ascii=False)
         
         try:
-            message = self.client.messages.create(
+            message = await self.client.messages.create(
                 model="claude-3-5-sonnet-20241022",
                 max_tokens=2048,
                 system=RESEARCH_REPORT_PROMPT,

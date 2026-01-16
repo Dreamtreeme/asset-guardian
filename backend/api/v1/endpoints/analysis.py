@@ -4,7 +4,7 @@ from services.engine.technical import analyze_mid_term, analyze_short_term
 from services.llm import llm_service
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from db.session import deps
+from api import deps
 from schemas.analysis import AnalysisCreate, AnalysisOut
 
 router = APIRouter()
