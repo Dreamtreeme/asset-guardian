@@ -42,7 +42,7 @@ def get_real_time_analysis(symbol):
             return None
         
         analysis_id = 1
-        res_get = requests.get(f"{API_URL}/{analysis_id}?symbol={symbol}", timeout=60)
+        res_get = requests.get(f"{API_URL}/{analysis_id}?symbol={symbol}", timeout=120)
         if res_get.status_code == 200:
             return res_get.json()
         else:

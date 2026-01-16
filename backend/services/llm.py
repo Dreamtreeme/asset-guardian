@@ -103,6 +103,8 @@ RESEARCH_REPORT_PROMPT = """
 3. 핵심 논거 1개 (가장 강력한 수치 근거)
 4. 리스크 요약 1줄
 
+**보고서 길이:** 최대 500단어 이내로 간결하게 작성
+
 ---
 
 ## 출력 형식 (필수)
@@ -143,8 +145,8 @@ class LLMService:
 
         try:
             message = await self.client.messages.create(
-                model="claude-opus-4-5",
-                max_tokens=8192,  # 4096 → 8192로 증가 (긴 보고서 완전 생성)
+                model="claude-sonnet-4-5",  # Opus → Sonnet으로 변경 (속도 개선)
+                max_tokens=4096,  # 8192 → 4096으로 감소 (간결한 보고서)
                 system=RESEARCH_REPORT_PROMPT,
                 messages=[
                     {
