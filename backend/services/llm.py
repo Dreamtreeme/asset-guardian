@@ -107,8 +107,9 @@ RESEARCH_REPORT_PROMPT = """
 
 ## 출력 형식 (필수)
 
-당신의 응답은 반드시 다음 JSON 구조를 따라야 합니다:
+당신의 응답은 **두 부분**으로 구성됩니다:
 
+**1단계: JSON 메타데이터 블록**
 ```json
 {
   "investment_rating": "Overweight",
@@ -117,20 +118,18 @@ RESEARCH_REPORT_PROMPT = """
   "upside_pct": 19.8,
   "target_period_months": 12,
   "key_thesis": "핵심 투자 논거 1줄 (줄바꿈 금지)",
-  "primary_risk": "주요 리스크 1줄 (줄바꿈 금지)",
-  "report_markdown": "전체 보고서 마크다운 텍스트"
+  "primary_risk": "주요 리스크 1줄 (줄바꿈 금지)"
 }
 ```
 
-**중요한 JSON 작성 규칙:**
-1. 모든 문자열 값은 큰따옴표(")로 감싸야 합니다
-2. 문자열 내부에 줄바꿈(\n)이 있으면 안 됩니다 - 한 줄로 작성하세요
-3. 문자열 내부에 큰따옴표가 있으면 반드시 이스케이프(\")하세요
-4. investment_rating은 반드시 "Overweight", "Neutral", "Underweight" 중 하나여야 합니다
-5. 숫자 필드(target_price, current_price 등)는 따옴표 없이 숫자만 입력하세요
-6. report_markdown 필드만 줄바꿈을 포함할 수 있으며, 반드시 \\n으로 이스케이프하세요
+**2단계: 마크다운 보고서**
+JSON 블록 다음 줄부터 상세 리서치 보고서를 마크다운 형식으로 작성하세요.
+줄바꿈, 표, 특수문자 등을 자유롭게 사용할 수 있습니다.
 
-JSON 외부에 다른 텍스트를 포함하지 마십시오. 반드시 유효한 JSON만 반환하십시오.
+**중요:**
+- JSON 블록은 반드시 ```json ... ``` 코드 블록으로 감싸세요
+- JSON에는 report_markdown 필드를 포함하지 마세요
+- 마크다운 보고서는 JSON 블록 바로 다음 줄부터 시작하세요
 """
 
 class LLMService:
@@ -164,8 +163,14 @@ class LLMService:
                     json_start = response_text.find("```json") + 7
                     json_end = response_text.find("```", json_start)
                     json_str = response_text[json_start:json_end].strip()
+                    
+                    # 마크다운 보고서 추출 (JSON 블록 이후의 모든 텍스트)
+                    markdown_start = json_end + 3  # ``` 이후
+                    report_markdown = response_text[markdown_start:].strip()
+                    
                 elif response_text.strip().startswith("{"):
                     json_str = response_text.strip()
+                    report_markdown = ""
                 else:
                     # JSON 형식이 아니면 기본 구조 반환
                     return {
@@ -179,48 +184,26 @@ class LLMService:
                         "report_markdown": response_text
                     }
                 
-                # JSON 정리: 줄바꿈 제거 및 이스케이프 처리
+                # JSON 파싱 (이제 report_markdown 필드 없음, 간단한 정리만)
                 import re
-                # key_thesis와 primary_risk 필드의 값에서 줄바꿈 제거
                 json_str = re.sub(
                     r'("key_thesis"\s*:\s*")(.*?)(")',
-                    lambda m: m.group(1) + m.group(2).replace('\n', ' ').replace('\r', '').strip() + m.group(3),
+                    lambda m: m.group(1) + m.group(2).replace('\n', ' ').strip() + m.group(3),
                     json_str,
                     flags=re.DOTALL
                 )
                 json_str = re.sub(
                     r'("primary_risk"\s*:\s*")(.*?)(")',
-                    lambda m: m.group(1) + m.group(2).replace('\n', ' ').replace('\r', '').strip() + m.group(3),
+                    lambda m: m.group(1) + m.group(2).replace('\n', ' ').strip() + m.group(3),
                     json_str,
                     flags=re.DOTALL
                 )
                 
-                # report_markdown 필드 처리: 마지막 필드이므로 특별 처리
-                # "report_markdown": "..." 부분을 찾아서 줄바꿈을 \\n으로 변환
-                if '"report_markdown"' in json_str:
-                    # report_markdown 시작 위치 찾기
-                    start_marker = '"report_markdown"'
-                    start_idx = json_str.find(start_marker)
-                    if start_idx != -1:
-                        # 첫 번째 " 찾기 (값의 시작)
-                        value_start = json_str.find('"', start_idx + len(start_marker) + 1)
-                        # 마지막 } 찾기
-                        closing_brace = json_str.rfind('}')
-                        # 마지막 " 찾기 (값의 끝, } 바로 앞)
-                        value_end = json_str.rfind('"', value_start + 1, closing_brace)
-                        
-                        if value_start != -1 and value_end != -1:
-                            # report_markdown 값 추출
-                            report_value = json_str[value_start + 1:value_end]
-                            # 줄바꿈을 \\n으로 이스케이프
-                            escaped_value = report_value.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '')
-                            # 원본 교체
-                            json_str = json_str[:value_start + 1] + escaped_value + json_str[value_end:]
-                
-                print(f"[DEBUG] 정리된 JSON (first 500 chars): {json_str[:500]}")
-                
                 llm_output = json.loads(json_str)
+                llm_output["report_markdown"] = report_markdown  # 마크다운 추가
+                
                 print(f"[DEBUG] LLM JSON PARSED: {llm_output.get('investment_rating')}, Target: {llm_output.get('target_price')}")
+                print(f"[DEBUG] Report length: {len(report_markdown)} chars")
                 return llm_output
                 
             except json.JSONDecodeError as e:
