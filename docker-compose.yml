@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:15
@@ -5,27 +7,32 @@ services:
       - postgres_data:/var/lib/postgresql/data
     env_file: .env
     networks:
-      - asset-guardian-network
+      - asset-analyzer-network
 
   backend:
     build: ./backend
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     env_file: .env
     depends_on:
       - db
     networks:
-      - asset-guardian-network
+      - asset-analyzer-network
 
   frontend:
     build: ./frontend
-    ports:
-      - "8501:8501"
+    expose:
+      - "8501"
+    entrypoint: ["streamlit", "run", "app.py", 
+                 "--server.port=8501", 
+                 "--server.address=0.0.0.0", 
+                 "--server.enableCORS=false", 
+                 "--server.enableXsrfProtection=false"]
     env_file: .env
     depends_on:
       - backend
     networks:
-      - asset-guardian-network
+      - asset-analyzer-network
 
   nginx:
     image: nginx:latest
@@ -34,15 +41,16 @@ services:
       - "443:443"
     volumes:
       - ./nginx:/etc/nginx/conf.d
-      - /etc/letsencrypt:/etc/letsencrypt:ro # 인증서 경로 공유 (읽기 전용)
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
+    networks:
+      - asset-analyzer-network
 
 volumes:
   postgres_data:
 
-
 networks:
-  asset-guardian-network:
+  asset-analyzer-network:
     driver: bridge
