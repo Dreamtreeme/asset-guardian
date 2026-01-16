@@ -165,19 +165,19 @@ def plot_financial_trends(fund_data):
     if not revenue.get("사용가능") or not op_margin.get("사용가능"):
         return plot_placeholder("데이터 부족")
     
-    # 분기 데이터 준비
-    num_quarters = revenue.get("분기수", 20)
-    quarters = list(range(num_quarters))
+    # 분기 데이터 준비 (백엔드에서 오는 데이터 사용)
+    rev_history = revenue.get("history", [])
+    labels = revenue.get("labels", [])
     
-    # 기울기로 과거 값 역산
-    rev_current = revenue.get("최신값", 0)
-    rev_slope = revenue.get("기울기", 0)
-    revenues = [rev_current - rev_slope * (num_quarters-1-i) for i in quarters]
+    # 매출 단위를 조원으로 변환 (10^12로 나눔)
+    revenues_scaled = [v / 1e12 for v in rev_history]
     
-    margin_current = op_margin.get("최신값", 0)
-    margin_slope = op_margin.get("기울기", 0)
-    margins = [(margin_current - margin_slope * (num_quarters-1-i)) * 100 for i in quarters]
+    margin_history = op_margin.get("history", [])
+    margins = [v * 100 for v in margin_history] 
     
+    if not labels or not revenues_scaled:
+        return plot_placeholder("최근 분기 데이터 부족")
+
     # 서브플롯 생성: 2행 1열 (매출액 라인 / 영업이익률 막대)
     fig = make_subplots(rows=2, cols=1, 
                         shared_xaxes=True, 
@@ -186,15 +186,15 @@ def plot_financial_trends(fund_data):
     
     # 1. 매출액 (라인 그래프)
     fig.add_trace(
-        go.Scatter(x=quarters, y=revenues, name="매출액", 
+        go.Scatter(x=labels, y=revenues_scaled, name="매출액", 
                    line=dict(color='#3B82F6', width=4), mode='lines+markers+text',
-                   text=[f"{v:.1f}" for v in revenues], textposition="top center"),
+                   text=[f"{v:.1f}" for v in revenues_scaled], textposition="top center"),
         row=1, col=1
     )
     
     # 2. 영업이익률 (막대 그래프)
     fig.add_trace(
-        go.Bar(x=quarters, y=margins, name="영업이익률", 
+        go.Bar(x=labels, y=margins, name="영업이익률", 
                marker_color='#DC2626', opacity=0.8,
                width=0.4, # 막대 너비 줄임
                text=[f"{v:.1f}%" for v in margins], textposition="outside"),
@@ -210,9 +210,8 @@ def plot_financial_trends(fund_data):
     )
     
     # 디자인 디테일
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
+    fig.update_xaxes(type='category', showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', tickformat=',.1f') # T, G 접미사 제거
-    fig.update_xaxes(title_text="최근 분기 추세", row=2, col=1)
     
     return fig
 
@@ -246,7 +245,7 @@ def plot_valuation_indicators(peg, roe, current_ratio):
     fig.add_trace(go.Indicator(
         mode = "gauge+number",
         value = peg,
-        title = {'text': "PEG Ratio", 'font': {'size': 14}},
+        title = {'text': "PEG 배수", 'font': {'size': 14}},
         gauge = {
             'axis': {'range': [0, 3]},
             'bar': {'color': "#3B82F6"},
@@ -268,7 +267,7 @@ def plot_valuation_indicators(peg, roe, current_ratio):
         mode = "gauge+number",
         value = roe * 100,
         number = {'suffix': "%"},
-        title = {'text': "ROE", 'font': {'size': 14}},
+        title = {'text': "ROE (자본효율성)", 'font': {'size': 14}},
         gauge = {
             'axis': {'range': [0, 30]},
             'bar': {'color': "#10B981"},
@@ -333,7 +332,7 @@ def plot_rsi_bar(rsi_value):
         marker_color=color,
         text=[f"{rsi_value:.1f}"],
         textposition='outside',
-        width=0.3 # 더 얇게 조정
+        width=0.2 # 더 얇게 조정
     ))
     
     # 과매수/과매도 기준선
@@ -341,10 +340,17 @@ def plot_rsi_bar(rsi_value):
     fig.add_hline(y=30, line_dash="dash", line_color="#059669", annotation_text="과매도(30)")
     
     fig.update_layout(
-        height=220,
-        margin=dict(l=20, r=20, t=30, b=20), # 여백 증가
+        height=240, # 높이 약간 증가
+        margin=dict(l=20, r=20, t=30, b=20),
         plot_bgcolor='white',
-        yaxis=dict(range=[0, 100], title="RSI 값"),
+        yaxis=dict(
+            range=[0, 100], 
+            title="RSI 지수",
+            tickmode='linear',
+            tick0=0,
+            dtick=20,
+            gridcolor='#F1F5F9'
+        ),
         showlegend=False
     )
     return fig
@@ -531,7 +537,7 @@ def render_summary(llm_data):
     with col1:
         st.markdown(f"""
         <div class="insight-box">
-            <h4 style="margin-top:0;">💡 핵심 논거</h4>
+            <h4 style="margin-top:0;">핵심 논거</h4>
             <p style="margin-bottom:0;">{llm_data.get('key_thesis', 'N/A')}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -539,13 +545,13 @@ def render_summary(llm_data):
     with col2:
         st.markdown(f"""
         <div class="insight-box risk">
-            <h4 style="margin-top:0;">⚠️ 주요 리스크</h4>
+            <h4 style="margin-top:0;">주요 리스크</h4>
             <p style="margin-bottom:0;">{llm_data.get('primary_risk', 'N/A')}</p>
         </div>
         """, unsafe_allow_html=True)
 
 def render_fundamental(long_data, llm_data):
-    st.markdown('<div class="section-title">📈 펀더멘털 성장 추세</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">펀더멘털 성장 추세</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns([1.5, 1], gap="large")
     
@@ -556,7 +562,7 @@ def render_fundamental(long_data, llm_data):
     with col2:
         st.markdown(f"""
         <div class="insight-box">
-            <h4>📊 분석</h4>
+            <h4>분석</h4>
             <p>{llm_data.get('fundamental_analysis', '재무 분석 중...')}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -564,7 +570,7 @@ def render_fundamental(long_data, llm_data):
     st.markdown("---")
 
 def render_valuation(long_data, llm_data):
-    st.markdown('<div class="section-title">💰 밸류에이션 분석</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">밸류에이션 분석</div>', unsafe_allow_html=True)
     
     peg = long_data.get('peg_ratio', 0)
     roe = long_data.get('roe', 0)
@@ -584,12 +590,12 @@ def render_valuation(long_data, llm_data):
     else:
         peg_desc = f"🔴 PEG {peg:.2f}는 이익 성장 대비 주가가 과열되어 있어 밸류에이션 부담이 존재합니다."
     
-    roe_status = "우수(High)" if roe > 0.15 else "양호(Good)" if roe > 0.10 else "보통(Fair)"
-    current_ratio_status = "건전(Health)" if current_ratio > 1.5 else "주의(Caution)"
+    roe_status = "우수" if roe > 0.15 else "양호" if roe > 0.10 else "보통"
+    current_ratio_status = "건전" if current_ratio > 1.5 else "주의"
     
     st.markdown(f"""
     <div class="insight-box">
-        <h4>💡 Valuation Analyst Summary</h4>
+        <h4>밸류에이션 요약</h4>
         <p style="font-size: 1.1rem; color: #1E293B; font-weight: 600; margin-bottom: 12px;">{peg_desc}</p>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
             <div style="background: white; padding: 10px; border: 1px solid #F1F5F9; border-radius: 6px;">
@@ -610,7 +616,7 @@ def render_valuation(long_data, llm_data):
     st.markdown("---")
 
 def render_technical(mid_data, llm_data):
-    st.markdown('<div class="section-title">📉 RSI 분석</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">RSI 분석</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns([1, 1.5], gap="large")
     
@@ -621,13 +627,13 @@ def render_technical(mid_data, llm_data):
     with col2:
         # RSI 자동 해석
         if rsi_value > 70:
-            rsi_signal = "🔴 과매수"
+            rsi_signal = "과매수"
             rsi_desc = f"RSI {rsi_value:.0f}은 과매수 구간입니다. 단기 조정 가능성에 유의하시기 바랍니다."
         elif rsi_value < 30:
-            rsi_signal = "🟢 과매도"
+            rsi_signal = "과매도"
             rsi_desc = f"RSI {rsi_value:.0f}은 과매도 구간입니다. 기술적 반등 가능성이 높아지고 있습니다."
         else:
-            rsi_signal = "🟡 중립"
+            rsi_signal = "중립"
             rsi_desc = f"RSI {rsi_value:.0f}은 중립 구간입니다. 추가 상승 여력이 남아있는 것으로 판단됩니다."
         
         st.markdown(f"""
@@ -708,7 +714,7 @@ def main():
         
         # 전문 리서치 보고서 섹션
         st.markdown("---")
-        st.markdown('<div class="section-title">📄 전문 리서치 보고서</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">전문 리서치 보고서</div>', unsafe_allow_html=True)
         report_text = llm_data.get("report_markdown", "보고서가 생성되지 않았습니다.")
         st.markdown(f'<div class="report-container">{report_text}</div>', unsafe_allow_html=True)
     else:

@@ -36,6 +36,8 @@ RESEARCH_REPORT_PROMPT = """
 - 반드시 ```json ... ``` 코드 블록으로 감싸세요.
 - 모든 필드는 반드시 채워져야 하며, 한국어로만 작성하세요.
 - **수치적 목표가(Target Price)나 정확한 상승여력(Upside %)을 제시하지 마십시오.** (데이터 부재로 인한 허위 정보 방지)
+- **`report_markdown` 필드는 단순히 개별 섹션을 합친 것이 아니라, 모든 분석(재무, 밸류에이션, 기술적 분석)을 종합하여 인사이트를 도출하는 하나의 완성된 전문 보고서여야 합니다.** (데이터 간의 상관관계를 분석에 포함하세요)
+- **모든 출력에서 이모지(Emoji)나 픽토그램을 사용하지 마십시오.** (전문 리서치 보고서의 톤 유지)
 - 제공된 데이터에 기반한 분석만 작성하세요 (추측 금지).
 """
 
@@ -72,7 +74,6 @@ class LLMService:
                     json_str = response_text[json_start:json_end].strip()
                 else:
                     json_str = response_text
-                    raise ValueError("Invalid response format")
                 
                 # 파싱 및 정리
                 llm_output = json.loads(json_str)
@@ -83,30 +84,31 @@ class LLMService:
                     if key in llm_output and isinstance(llm_output[key], str):
                         llm_output[key] = llm_output[key].replace('\n', ' ').strip()
                 
-                # 마크다운 보고서 생성 (JSON 필드에서 조합)
-                report_markdown = f"""# {company_name} ({symbol})
+                # 마크다운 보고서가 불충분할 경우에만 보조적으로 생성
+                if "report_markdown" not in llm_output or len(llm_output["report_markdown"]) < 100:
+                    report_markdown = f"""# {company_name} ({symbol})
 
-## Executive Summary
+## 투자 요약
 
 {llm_output.get('executive_summary', 'N/A')}
 
-## Fundamental Analysis
+## 펀더멘털 분석
 
 {llm_output.get('fundamental_analysis', 'N/A')}
 
-## Valuation Analysis
+## 밸류에이션 분석
 
 {llm_output.get('valuation_analysis', 'N/A')}
 
-## Technical Analysis
+## 기술적 분석
 
 {llm_output.get('technical_analysis', 'N/A')}
 
-## Conclusion
+## 결론 및 전략
 
 {llm_output.get('conclusion', 'N/A')}
 """
-                llm_output["report_markdown"] = report_markdown
+                    llm_output["report_markdown"] = report_markdown
                 
 
                 return llm_output
@@ -121,11 +123,8 @@ class LLMService:
         # 기본 응답 (파싱 실패 또는 예외 발생 시)
 
         return {
-            "investment_rating": "Neutral",
-            "target_price": 0,
+            "investment_rating": "보유 (HOLD)",
             "current_price": 0,
-            "upside_pct": 0,
-            "target_period_months": 12,
             "key_thesis": "데이터 분석 중",
             "primary_risk": "불확실성",
             "report_markdown": "보고서 생성 중 오류가 발생했습니다."

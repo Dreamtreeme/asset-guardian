@@ -68,15 +68,26 @@ def analyze_long_term(td: TickerData) -> Dict[str, Any]:
         if s is None or s.dropna().shape[0] < 3:
             return {"사용가능": False}
         s = s.dropna().sort_index()
+        
+        # 최근 5개 분기 데이터 추출
+        s_recent = s.iloc[-5:]
+        
+        def format_quarter(dt):
+            q = (dt.month - 1) // 3 + 1
+            return f"{str(dt.year)[2:]}Q{q}"
+            
         diff = s.diff()
-        recent = diff.iloc[-8:] if diff.shape[0] >= 8 else diff
-        improve_ratio = float((recent > 0).mean()) if len(recent) else None
+        recent_diff = diff.iloc[-8:] if diff.shape[0] >= 8 else diff
+        improve_ratio = float((recent_diff > 0).mean()) if len(recent_diff) else None
+        
         return {
             "사용가능": True,
             "최신값": float(s.iloc[-1]),
             "기울기": linreg_slope(s),
             "최근개선비율": improve_ratio,
             "분기수": int(s.shape[0]),
+            "history": s_recent.tolist(),
+            "labels": [format_quarter(d) for d in s_recent.index]
         }
 
     fund = {
