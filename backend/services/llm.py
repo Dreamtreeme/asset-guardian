@@ -110,7 +110,7 @@ class LLMService:
 
         try:
             message = await self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-opus-4-5",
                 max_tokens=2048,
                 system=RESEARCH_REPORT_PROMPT,
                 messages=[
