@@ -156,7 +156,7 @@ class LLMService:
                 ]
             )
             response_text = message.content[0].text
-            print(f"\n[DEBUG] LLM RESPONSE RECEIVED ({len(response_text)} chars)\n{response_text[:200]}...\n{'='*50}")
+            print(f"\n{'='*50}\n[DEBUG] LLM RESPONSE RECEIVED ({len(response_text)} chars)\n{response_text}\n{'='*50}")
             
             # JSON 파싱 시도
             try:
