@@ -127,10 +127,13 @@ class LLMService:
                 return llm_output
                 
             except json.JSONDecodeError as e:
-                pass
+                print(f"❌ JSON 파싱 에러: {e}")
+                print(f"📄 원본 응답 텍스트: {response_text}")
             
         except Exception as e:
-            pass
+            print(f"❌ LLM 호출 중 예외 발생: {type(e).__name__} - {e}")
+            import traceback
+            traceback.print_exc()
 
         
         # 기본 응답 (파싱 실패 또는 예외 발생 시)
