@@ -85,13 +85,13 @@ async def get_analysis(
             ReportCache.report_date >= datetime.combine(today, datetime.min.time()),
             ReportCache.report_date < datetime.combine(today, datetime.max.time())
         ).first()
-        
-            logger.info(f"💾 [API] {symbol} 캐시된 보고서 발견")
+        if cached_report:
+            logger.info(f"[API] {symbol} 캐시된 보고서 발견")
             llm_output = cached_report.llm_output
         else:
-            logger.info(f"🆕 [API] {symbol} 캐시 없음. 신규 분석 진행...")
+            logger.info(f"[API] {symbol} 캐시 없음. 신규 분석 진행...")
     except Exception as e:
-        logger.error(f"⚠️ [API] 캐시 조회 오류 (무시): {e}")
+        logger.error(f"[API] 캐시 조회 오류 (무시): {e}")
 
     # 리스크 지표 계산 (VaR, 변동성)
     var_5_pct = 0
@@ -130,12 +130,12 @@ async def get_analysis(
                     llm_output=llm_output
                 ))
                 db.commit()
-                logger.info(f"✅ [API] {symbol} 보고서 캐시 저장 완료")
+                logger.info(f"[API] {symbol} 보고서 캐시 저장 완료")
             except Exception as save_err:
                 db.rollback()
-                logger.error(f"❌ [API] {symbol} 캐시 저장 실패: {save_err}")
+                logger.error(f"[API] {symbol} 캐시 저장 실패: {save_err}")
         else:
-            logger.warning(f"⚠️ [API] {symbol} 분석 결과 미흡으로 캐시 저장 생략")
+            logger.warning(f"[API] {symbol} 분석 결과 미흡으로 캐시 저장 생략")
     
 
     
