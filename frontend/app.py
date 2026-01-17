@@ -580,7 +580,7 @@ def render_fundamental(long_data, llm_data):
     
     with col1:
         financial_trends = long_data.get('financial_trends', {})
-        st.plotly_chart(plot_financial_trends(financial_trends), use_container_width=True)
+        st.plotly_chart(plot_financial_trends(financial_trends), width='stretch')
     
     with col2:
         st.markdown(f"""
@@ -600,7 +600,7 @@ def render_valuation(long_data, llm_data):
     current_ratio = long_data.get('current_ratio', 0)
     
     # 지표 차트를 상단에 전체 너비로 표시
-    st.plotly_chart(plot_valuation_indicators(peg, roe, current_ratio), use_container_width=True)
+    st.plotly_chart(plot_valuation_indicators(peg, roe, current_ratio), width='stretch')
     
     # 분석 의견을 하단에 표시
     # 자동 밸류에이션 해석 고도화
@@ -645,7 +645,7 @@ def render_technical(mid_data, llm_data):
     
     with col1:
         rsi_value = mid_data.get('rsi_value', 50)
-        st.plotly_chart(plot_rsi_bar(rsi_value), use_container_width=True)
+        st.plotly_chart(plot_rsi_bar(rsi_value), width='stretch')
     
     with col2:
         # RSI 자동 해석
@@ -683,11 +683,11 @@ def render_risk_analysis(long_data, llm_data):
     with c1:
         st.markdown("**낙폭 분석 (Drawdown)**")
         price_history = long_data.get('price_history', {})
-        st.plotly_chart(plot_drawdown_chart(price_history), use_container_width=True)
+        st.plotly_chart(plot_drawdown_chart(price_history), width='stretch')
     
     with c2:
         st.markdown("**수익률 분포**")
-        st.plotly_chart(plot_return_distribution(price_history), use_container_width=True)
+        st.plotly_chart(plot_return_distribution(price_history), width='stretch')
     
     # 리스크 지표
     risk_metrics = long_data.get('risk_metrics', {})
@@ -699,7 +699,7 @@ def render_risk_analysis(long_data, llm_data):
     
     # 장기 이평선
     st.markdown("**이동평균선 (장기 추세)**")
-    st.plotly_chart(plot_moving_averages(price_history), use_container_width=True)
+    st.plotly_chart(plot_moving_averages(price_history), width='stretch')
     
     # LLM 리스크 분석 텍스트 추가
     st.markdown(f"""

@@ -71,32 +71,50 @@ class LLMService:
             response_text = message.content[0].text
             logger.info(f"✅ [LLM] 응답 수신 완료 (길이: {len(response_text)})")
 
-            
-                # JSON 파싱
+            # JSON 파싱
+            try:
+                # 가장 바깥쪽의 { } 블록을 찾음
+                start_idx = response_text.find('{')
+                end_idx = response_text.rfind('}')
+                
+                if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                    json_str = response_text[start_idx:end_idx+1].strip()
+                else:
+                    json_str = response_text
+                
+                # 파싱 시도
                 try:
-                    # JSON 추출 (표준 re 모듈 호환 방식으로 수정)
-                    import re
-                    # 가장 바깥쪽의 { } 블록을 찾음
-                    start_idx = response_text.find('{')
-                    end_idx = response_text.rfind('}')
-                    
-                    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-                        json_str = response_text[start_idx:end_idx+1].strip()
-                    else:
-                        json_str = response_text
-                    
-                    # 파싱 및 정리
                     llm_output = json.loads(json_str)
+                except json.JSONDecodeError:
+                    # 절단된 JSON 복구 시도: 마지막 완전한 필드까지만 파싱
+                    logger.warning("⚠️ [LLM] JSON 절단 감지, 복구 시도 중...")
+                    
+                    # 마지막 완전한 "key": "value" 쌍 이후로 자르기
+                    last_quote = json_str.rfind('"')
+                    if last_quote > 0:
+                        # 마지막 따옴표 이전의 마지막 콤마 또는 중괄호 찾기
+                        search_area = json_str[:last_quote]
+                        last_comma = search_area.rfind(',')
+                        
+                        if last_comma > 0:
+                            # 마지막 콤마까지 자르고 닫는 중괄호 추가
+                            recovered_json = json_str[:last_comma] + '}'
+                            llm_output = json.loads(recovered_json)
+                            logger.info("✅ [LLM] 절단된 JSON 복구 성공")
+                        else:
+                            raise  # 복구 불가능, 원래 에러 발생
+                    else:
+                        raise  # 복구 불가능
+
                 logger.info(f"✨ [LLM] JSON 파싱 및 데이터 구조화 성공")
 
-                
                 # 문자열 필드 정리
                 for key in ['key_thesis', 'primary_risk']:
                     if key in llm_output and isinstance(llm_output[key], str):
                         llm_output[key] = llm_output[key].replace('\n', ' ').strip()
                 
                 # 마크다운 보고서가 불충분할 경우에만 보조적으로 생성
-                if "report_markdown" not in llm_output or len(llm_output["report_markdown"]) < 100:
+                if "report_markdown" not in llm_output or len(llm_output.get("report_markdown", "")) < 100:
                     report_markdown = f"""# {company_name} ({symbol})
 
 ## 투자 요약
@@ -124,7 +142,6 @@ class LLMService:
 {llm_output.get('conclusion', 'N/A')}
 """
                     llm_output["report_markdown"] = report_markdown
-                
 
                 # 디버그 정보 추가
                 llm_output["_debug"] = {
