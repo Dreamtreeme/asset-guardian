@@ -128,16 +128,24 @@ async def get_analysis(
         
         llm_output = await llm_service.generate_report(analysis_data_preprocessed)
 
-        # 캐시 저장
-        try:
-            db.add(ReportCache(
-                symbol=symbol,
-                report_date=datetime.now(),
-                llm_output=llm_output
-            ))
-            db.commit()
-        except Exception as save_err:
-            db.rollback()
+        # 캐시 저장 (성공한 분석 결과만 저장)
+        if llm_output.get("is_success"):
+            try:
+                db.add(ReportCache(
+                    symbol=symbol,
+                    report_date=datetime.now(),
+                    llm_output=llm_output
+                ))
+                db.commit()
+                logger.info(f"✅ [API] {symbol} LLM 보고서 캐시 저장 완료")
+                print(f"✅ [API] {symbol} 캐시 저장 성공", flush=True)
+            except Exception as save_err:
+                db.rollback()
+                logger.error(f"❌ [API] {symbol} 캐시 저장 실패: {save_err}")
+                print(f"❌ [API] {symbol} 캐시 저장 실패: {save_err}", flush=True)
+        else:
+            logger.warning(f"⚠️ [API] {symbol} 분석 결과가 정상이 아니어서 캐시를 저장하지 않습니다.")
+            print(f"⚠️ [API] {symbol} 분석 실패로 캐시 저장 건너뜀", flush=True)
     
 
     

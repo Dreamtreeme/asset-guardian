@@ -59,12 +59,12 @@ class LLMService:
         try:
             message = await self.client.messages.create(
                 model="claude-sonnet-4-5",  # Opus → Sonnet으로 변경 (속도 개선)
-                max_tokens=4096,  # 8192 → 4096으로 감소 (간결한 보고서)
+                max_tokens=8192,  # 4096 -> 8192로 확장하여 긴 보고서 절단 방지
                 system=RESEARCH_REPORT_PROMPT,
                 messages=[
                     {
                         "role": "user",
-                        "content": f"다음 수집된 데이터를 바탕으로 {company_name} ({symbol}) 종목에 대한 기관투자자용 리서치 보고서를 작성하십시오.\n\n[데이터]\n{data_context}"
+                        "content": f"다음 수집된 데이터를 바탕으로 {company_name} ({symbol}) 종목에 대한 기관투자자용 리서치 보고서를 작성하십시오. 절대로 응답이 중간에 끊어지지 않도록 JSON 형식을 엄격히 준수하십시오.\n\n[데이터]\n{data_context}"
                     }
                 ]
             )
@@ -72,18 +72,21 @@ class LLMService:
             logger.info(f"✅ [LLM] 응답 수신 완료 (길이: {len(response_text)})")
 
             
-            # JSON 파싱
-            try:
-                # JSON 추출
-                if "```json" in response_text:
-                    json_start = response_text.find("```json") + 7
-                    json_end = response_text.find("```", json_start)
-                    json_str = response_text[json_start:json_end].strip()
-                else:
-                    json_str = response_text
-                
-                # 파싱 및 정리
-                llm_output = json.loads(json_str)
+                # JSON 파싱
+                try:
+                    # JSON 추출 (표준 re 모듈 호환 방식으로 수정)
+                    import re
+                    # 가장 바깥쪽의 { } 블록을 찾음
+                    start_idx = response_text.find('{')
+                    end_idx = response_text.rfind('}')
+                    
+                    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+                        json_str = response_text[start_idx:end_idx+1].strip()
+                    else:
+                        json_str = response_text
+                    
+                    # 파싱 및 정리
+                    llm_output = json.loads(json_str)
                 logger.info(f"✨ [LLM] JSON 파싱 및 데이터 구조화 성공")
 
                 
@@ -129,6 +132,9 @@ class LLMService:
                     "raw_data_sent": analysis_data,
                     "raw_response": response_text
                 }
+                
+                # 성공 플래그 추가
+                llm_output["is_success"] = True
 
                 return llm_output
                 
@@ -143,13 +149,14 @@ class LLMService:
 
         
         # 기본 응답 (파싱 실패 또는 예외 발생 시)
-
         return {
             "investment_rating": "보유 (HOLD)",
             "current_price": 0,
             "key_thesis": "데이터 분석 중",
             "primary_risk": "불확실성",
-            "report_markdown": "보고서 생성 중 오류가 발생했습니다."
+            "report_markdown": "보고서 생성 중 오류가 발생했습니다.",
+            "is_success": False
         }
 
 llm_service = LLMService()
+```
