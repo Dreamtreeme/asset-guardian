@@ -530,9 +530,9 @@ def render_fundamental(long_data, llm_data):
 def render_valuation(long_data, llm_data):
     st.markdown('<div class="section-title">밸류에이션 분석</div>', unsafe_allow_html=True)
     
-    peg = long_data.get('peg_ratio', 0)
-    roe = long_data.get('roe', 0)
-    current_ratio = long_data.get('current_ratio', 0)
+    peg = long_data.get('peg_ratio') or 0
+    roe = long_data.get('roe') or 0
+    current_ratio = long_data.get('current_ratio') or 0
     
     # 지표 차트를 상단에 전체 너비로 표시
     st.plotly_chart(plot_valuation_indicators(peg, roe, current_ratio), width='stretch')
@@ -580,7 +580,7 @@ def render_technical(mid_data, long_data, llm_data):
     col1, col2 = st.columns([1, 1.5], gap="large")
     
     with col1:
-        rsi_value = mid_data.get('rsi_value', 50)
+        rsi_value = mid_data.get('rsi_value') or 50
         st.plotly_chart(plot_rsi_bar(rsi_value), width='stretch')
     
     with col2:
@@ -634,10 +634,14 @@ def render_risk_analysis(long_data, llm_data):
     # 리스크 지표
     risk_metrics = long_data.get('risk_metrics', {})
     if risk_metrics:
+        max_drawdown = risk_metrics.get('max_drawdown_5y') or 0
+        var_5 = risk_metrics.get('var_5_pct') or 0
+        volat = risk_metrics.get('volatility') or 0
+        
         col1, col2, col3 = st.columns(3)
-        col1.metric("최대 낙폭 (5년)", f"{risk_metrics.get('max_drawdown_5y', 0)*100:.1f}%")
-        col2.metric("VaR 5%", f"{risk_metrics.get('var_5_pct', 0)*100:.2f}%")
-        col3.metric("변동성 (연간)", f"{risk_metrics.get('volatility', 0)*100:.1f}%")
+        col1.metric("최대 낙폭 (5년)", f"{max_drawdown*100:.1f}%")
+        col2.metric("VaR 5%", f"{var_5*100:.2f}%")
+        col3.metric("변동성 (연간)", f"{volat*100:.1f}%")
     
     # AI 리스크 진단 텍스트
     st.markdown(f"""
