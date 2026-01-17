@@ -713,15 +713,37 @@ def render_risk_analysis(long_data, llm_data):
     """, unsafe_allow_html=True)
 
 def main():
-    st.sidebar.title("주식 분석 시스템")
-    symbol = st.sidebar.text_input("종목 코드", value="005930")
+    st.sidebar.title("🚀 주식 분석 시스템")
     
-    if st.sidebar.button("분석 실행"):
-        with st.spinner("분석 중..."):
+    # 분석 대상 샘플 종목 (2026년 1월 17일 코스피 시총 TOP 10 기준)
+    stocks_samples = {
+        "삼성전자 (005930)": "005930",
+        "SK하이닉스 (000660)": "000660",
+        "LG에너지솔루션 (373220)": "373220",
+        "삼성바이오로직스 (207940)": "207940",
+        "현대차 (005380)": "005380",
+        "한화에어로스페이스 (012450)": "012450",
+        "HD현대중공업 (329180)": "329180",
+        "두산에너빌리티 (034020)": "034020",
+        "SK스퀘어 (402340)": "402340",
+        "기아 (000270)": "000270"
+    }
+    
+    selected_stock_name = st.sidebar.selectbox(
+        "분석 종목 선택",
+        options=list(stocks_samples.keys()),
+        help="분석할 주요 종목을 선택하세요."
+    )
+    symbol = stocks_samples[selected_stock_name]
+    
+    if st.sidebar.button("📦 분석 실행", use_container_width=True):
+        with st.spinner(f"{selected_stock_name} 데이터 분석 중..."):
             result = get_real_time_analysis(symbol)
             if result:
                 st.session_state.analysis = result
     
+    st.sidebar.markdown("---")
+    st.sidebar.info("선택한 종목의 최근 재무, 기술적 지표, 리스크를 AI가 종합 분석합니다.")
     if "analysis" in st.session_state:
         res = st.session_state.analysis
         
