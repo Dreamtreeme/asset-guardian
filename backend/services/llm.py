@@ -26,7 +26,6 @@ RESEARCH_REPORT_PROMPT = """
 - **띄어쓰기를 철저히 하며, 단어 중간에 오타성 공백이 생기지 않도록 주의하십시오.**
 - `conclusion`, `report_markdown` 필드는 절대 생성하지 마십시오.
 """
-"""
 
 import logging
 logger = logging.getLogger(__name__)
