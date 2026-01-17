@@ -747,7 +747,24 @@ def main():
         st.markdown("---")
         st.markdown('<div class="section-title">전문 리서치 리포트</div>', unsafe_allow_html=True)
         
-        report_text = llm_data.get("report_markdown", "보고서 생성 중...")
+        # 개별 분석 필드를 조합하여 리서치 리포트 구성 (백엔드 중복 전송 제거)
+        report_text = f"""
+### [투자 요약]
+{llm_data.get('executive_summary', '데이터 분석 중...')}
+
+### 1. 펀더멘털 분석
+{llm_data.get('fundamental_analysis', '데이터 분석 중...')}
+
+### 2. 밸류에이션 분석
+{llm_data.get('valuation_analysis', '데이터 분석 중...')}
+
+### 3. 기술적 분석
+{llm_data.get('technical_analysis', '데이터 분석 중...')}
+
+### 4. 리스크 진단
+{llm_data.get('risk_analysis', '데이터 분석 중...')}
+        """.strip()
+        
         st.markdown(f'<div class="report-container">{report_text}</div>', unsafe_allow_html=True)
     else:
         st.info("왼쪽 사이드바에서 종목 코드를 입력하고 [분석 실행] 버튼을 눌러주세요.")

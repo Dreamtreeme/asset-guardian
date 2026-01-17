@@ -7,40 +7,38 @@ RESEARCH_REPORT_PROMPT = """
 제공된 종목 데이터를 바탕으로 전문적이고 신뢰도 높은 리서치 보고서를 작성하십시오.
 
 ## 핵심 요구사항
-- **톤 앤 매너**: 보수적, 정량적, 논리적 (추측 배제)
-- **언어**: 텍스트는 모두 **한국어**로 작성 (투자의견은 매수/보유/비중축소 명기)
-- **대상**: 신중한 기관 투자자 및 고액 자산가
+- **톤 앤 매너**: 극도의 절제미, 정량적 기반, 수식어 배제 (예: '강력한', '명확히', '충실히' 등 사용 금지)
+- **언어**: 한국어 (투자의견은 매수/보유/비중축소 명시)
+- **중복 엄금**: 모든 필드에서 동일한 수치를 반복 언급하지 마십시오.
+- **간결성**: 수치 나열보다는 그 수치가 의미하는 '결론'만 한 문장으로 서술하십시오.
 
-## 데이터 분석 기준
-- **재무**: 매출 성장세, 영업이익률 추이, PEG Ratio(<1 저평가), ROE(수익성), 유동성
-- **기술**: RSI(70상회 과열/30하회 과매도), 200일·300일 이동평균선 기반 장기 추세
-- **리스크**: 최대 낙폭(MDD), 연간 변동성(Volatility), VaR(5%) 기반 리스크 관리 권고
+## 섹션별 작성 가이드 (JSON 각 필드)
+1. `executive_summary`: 전체 분석의 최종 결론. **최대 3문장**으로 제한하며, 개별 분석 내용을 요약하지 말고 '최종 투자 판단'만 서술하십시오.
+2. `fundamental_analysis`: 실적 추세와 수익성 방향성. 수치 나열 대신 '성장성 여부'만 서술하십시오.
+3. `valuation_analysis`: 주가 매력도와 재무 건전성. PEG와 안정성 지표 기반의 가치 판단만 서술하십시오.
+4. `technical_analysis`: RSI 및 이평선이 시사하는 현재의 '매매 위치'와 '단기 방향성'만 서술하십시오.
+5. `risk_analysis`: 현재 가장 경계해야 할 핵심 리스크 1가지만 서술하십시오.
 
-## 예시 답변 (JSON 형식 - 모범 답안 구조)
+## 예시 답변 (JSON 형식)
 ```json
 {
   "investment_rating": "보유 (HOLD)",
   "current_price": 72500,
-  "key_thesis": "1) 최근 분기 영업이익률의 V자 반등을 통한 수익성 회복 확인, 2) 200일 장기 이평선의 우상향 지지력 확보",
-  "primary_risk": "RSI 85 수준의 단기 과매수 리스크 및 과거 5년 MDD -40%를 상회하는 높은 심리적 변동성",
-  "executive_summary": "동사는 2025년 3분기 실적 성장을 통해 펀더멘털의 질적 개선을 입증했으나, 단기 기술적 과열로 인해 추가 매수보다는 보유 전략이 유리합니다. 재무 안정성이 견조하므로 기술적 조정 시 분할 매수 기회로 활용할 것을 권고합니다.",
-  "fundamental_analysis": "매출 추세 차트에서 확인되듯 최근 4분간의 정체를 깨고 매출 15% 반등에 성공했습니다. 특히 영업이익률이 25Q2 저점인 6%에서 14%로 급격히 회복된 점은 효율적인 비용 통제가 이루어지고 있음을 시사합니다.",
-  "valuation_analysis": "현재 밸류에이션 게이지상 PEG 0.85는 이익 성장성 대비 주가가 저평가 구간에 진입했음을 보여줍니다. ROE 15%와 유동비율 250% 수준의 건전한 재무 구조가 주가의 하방 경직성을 강력하게 지지하고 있습니다.",
-  "technical_analysis": "가격 차트의 200일 이평선이 우상향으로 전환되며 장기 상승 모멘텀을 확보했습니다. 다만 RSI 막대 차트가 80을 상회하는 과매수 신호를 보내고 있어, 이평선 이격도를 좁히는 단기 평균 회귀 과정이 예상됩니다.",
-  "risk_analysis": "과거 5년 최대 낙폭(MDD) -45%의 높은 변동성 이력을 고려할 때, 단기 과열 구간에서의 추격 매수는 위험합니다. VaR(5%) 기준 일간 -2.5% 수준의 변동성을 염두에 둔 분산 투자 관점의 접근이 필수적입니다.",
-  "conclusion": "실적 회복세와 장기 추세 변곡점이 일치하는 매력적인 구간이나, 단기 과열 리스크를 고려하여 투자의견 '보유(HOLD)'를 유지하며 조정 시 비중 확대를 제안합니다.",
-  "report_markdown": "# [종목명] 투자 심층 분석 보고서\n\n## 1. 투자 하이라이트\n...(중략)...\n"
+  "key_thesis": "영업이익률 반등에 따른 수익성 회복 및 200일 이평선의 지지력 확인",
+  "primary_risk": "RSI 85 수준의 단기 과매수 리스크 및 높은 변동성",
+  "executive_summary": "수익성 회복세는 뚜렷하나 기술적 과중 구간에 진입했습니다. 신규 매수보다는 조정 시 비중 확대를 권고하는 보유 관점이 적절합니다.",
+  "fundamental_analysis": "매출 반등과 영업이익률의 V자 회복으로 실적 턴어라운드 국면에 진입한 것으로 분석됩니다.",
+  "valuation_analysis": "PEG 0.85로 성장성 대비 주가 매력은 높으나 부채비율 감소 여부에 대한 모니터링이 필요합니다.",
+  "technical_analysis": "200일선 지지로 장기 상승 동력은 유효하나, 과매수 신호로 인한 단기 평균 회귀 가능성이 높습니다.",
+  "risk_analysis": "과거 5년 MDD -45% 전례를 고려할 때 하락장 전환 시의 높은 변동성을 경계해야 합니다."
 }
 ```
 
-## 중요 규칙 (안정성 및 전문성)
-- 반드시 ```json ... ``` 코드 블록으로 감싸 모든 필드를 채우십시오.
-- 이모지 사용 금지, 전문적인 톤 유지.
-- 제공되지 않은 외부 데이터 추측 금지.
-- **텍스트 포맷팅 제한 (가독성)**:
-    - **중요**: 모든 필드 내에서 `**강조**` (Bold) 표시를 절대 사용하지 마십시오.
-    - **중요**: 각 분석 필드(`fundamental_analysis` 등) 내에서 `###`와 같은 마크다운 제목 태그를 사용하지 마십시오.
-    - **중요**: `(경미한 증가)`와 같은 소괄호`( )` 사용을 최소화하고 풀어서 서술하십시오.
+## 중요 규칙
+- 반드시 ```json ... ``` 코드 블록으로 감싸십시오.
+- 띄어쓰기를 정확히 하며, 단어 사이에 불필요한 공백을 넣지 마십시오.
+- **`conclusion`, `report_markdown` 필드는 절대 생성하지 마십시오.** (중복 방지)
+- **수식어를 배제하고 건조한 사실 위주로 작성하십시오.**
 """
 
 import logging
@@ -58,8 +56,9 @@ class LLMService:
         logger.info(f"🚀 [LLM] {company_name} ({symbol}) 분석 시작...")
         try:
             message = await self.client.messages.create(
-                model="claude-sonnet-4-5",  # Opus → Sonnet으로 변경 (속도 개선)
-                max_tokens=8192,  # 4096 -> 8192로 확장하여 긴 보고서 절단 방지
+                model="claude-sonnet-4-5",
+                max_tokens=2048,  
+                temperature=0.3,    
                 system=RESEARCH_REPORT_PROMPT,
                 messages=[
                     {
@@ -113,35 +112,11 @@ class LLMService:
                     if key in llm_output and isinstance(llm_output[key], str):
                         llm_output[key] = llm_output[key].replace('\n', ' ').strip()
                 
-                # 마크다운 보고서가 불충분할 경우에만 보조적으로 생성
-                if "report_markdown" not in llm_output or len(llm_output.get("report_markdown", "")) < 100:
-                    report_markdown = f"""# {company_name} ({symbol})
-
-## 투자 요약
-
-{llm_output.get('executive_summary', 'N/A')}
-
-## 펀더멘털 분석
-
-{llm_output.get('fundamental_analysis', 'N/A')}
-
-## 밸류에이션 분석
-
-{llm_output.get('valuation_analysis', 'N/A')}
-
-## 기술적 분석
-
-{llm_output.get('technical_analysis', 'N/A')}
-
-## 리스크 분석
-
-{llm_output.get('risk_analysis', 'N/A')}
-
-## 결론 및 전략
-
-{llm_output.get('conclusion', 'N/A')}
-"""
-                    llm_output["report_markdown"] = report_markdown
+                # 마크다운 리포트는 이제 프론트엔드에서 조립하므로 백엔드에서는 생성하지 않음
+                if "report_markdown" in llm_output:
+                    del llm_output["report_markdown"]
+                if "conclusion" in llm_output:
+                    del llm_output["conclusion"]
 
                 # 디버그 정보 추가
                 llm_output["_debug"] = {
@@ -167,11 +142,10 @@ class LLMService:
         
         # 기본 응답 (파싱 실패 또는 예외 발생 시)
         return {
-            "investment_rating": "보유 (HOLD)",
+            "investment_rating": "데이터 분석 제한",
             "current_price": 0,
-            "key_thesis": "데이터 분석 중",
-            "primary_risk": "불확실성",
-            "report_markdown": "보고서 생성 중 오류가 발생했습니다.",
+            "key_thesis": "데이터 수집 부족 또는 분석 오류",
+            "primary_risk": "리스크 산출 불가",
             "is_success": False
         }
 
