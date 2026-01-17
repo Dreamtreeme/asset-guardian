@@ -550,7 +550,7 @@ def render_summary(llm_data):
     if executive_summary:
         st.markdown(f"""
         <div class="executive-summary">
-            <strong>📊 투자 개요</strong><br>
+            <strong>투자 개요</strong><br>
             {executive_summary}
         </div>
         """, unsafe_allow_html=True)
@@ -605,13 +605,13 @@ def render_valuation(long_data, llm_data):
     # 분석 의견을 하단에 표시
     # 자동 밸류에이션 해석 고도화
     if peg < 0.8:
-        peg_desc = f"🟢 PEG {peg:.2f}로 이익 성장성 대비 주가가 매우 저평가된 매력적인 구간입니다."
+        peg_desc = f"PEG {peg:.2f}로 이익 성장성 대비 주가가 매우 저평가된 매력적인 구간입니다."
     elif peg < 1.2:
-        peg_desc = f"🟢 PEG {peg:.2f}는 성장성과 주가 수준이 이상적인 균형을 이루는 적정 가치 구간입니다."
+        peg_desc = f"PEG {peg:.2f}는 성장성과 주가 수준이 이상적인 균형을 이루는 적정 가치 구간입니다."
     elif peg < 2.0:
-        peg_desc = f"🟡 PEG {peg:.2f}는 성장에 따른 프리미엄이 반영된 구간이나, 과도한 수준은 아닙니다."
+        peg_desc = f"PEG {peg:.2f}는 성장에 따른 프리미엄이 반영된 구간이나, 과도한 수준은 아닙니다."
     else:
-        peg_desc = f"🔴 PEG {peg:.2f}는 이익 성장 대비 주가가 과열되어 있어 밸류에이션 부담이 존재합니다."
+        peg_desc = f"PEG {peg:.2f}는 이익 성장 대비 주가가 과열되어 있어 밸류에이션 부담이 존재합니다."
     
     roe_status = "우수" if roe > 0.15 else "양호" if roe > 0.10 else "보통"
     current_ratio_status = "건전" if current_ratio > 1.5 else "주의"
@@ -713,7 +713,7 @@ def render_risk_analysis(long_data, llm_data):
     """, unsafe_allow_html=True)
 
 def main():
-    st.sidebar.title("🚀 주식 분석 시스템")
+    st.sidebar.title("주식 분석 시스템")
     
     # 분석 대상 샘플 종목 (2026년 1월 17일 코스피 시총 TOP 10 기준)
     stocks_samples = {
@@ -736,7 +736,7 @@ def main():
     )
     symbol = stocks_samples[selected_stock_name]
     
-    if st.sidebar.button("📦 분석 실행", use_container_width=True):
+    if st.sidebar.button("분석 실행", use_container_width=True):
         with st.spinner(f"{selected_stock_name} 데이터 분석 중..."):
             result = get_real_time_analysis(symbol)
             if result:
@@ -766,8 +766,6 @@ def main():
         render_fundamental(res["long_term"], llm_data)
         render_valuation(res["long_term"], llm_data)
         render_technical(res["mid_term"], res["long_term"], llm_data)
-        render_risk_analysis(res["long_term"], llm_data)
-        
         render_risk_analysis(res["long_term"], llm_data)
     else:
         st.info("왼쪽 사이드바에서 종목 코드를 입력하고 [분석 실행] 버튼을 눌러주세요.")

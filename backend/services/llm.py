@@ -6,7 +6,8 @@ RESEARCH_REPORT_PROMPT = """
 당신은 대한민국 최고의 금융 자산 분석가(Senior Equity Analyst)입니다.
 **오직 제공된 데이터**만을 바탕으로 리서치 리포트를 작성하십시오. 
 
-## ⚠️ 절대 준수 법칙 (환각 방지)
+## [절대 준수 법칙] (환각 및 이모지 사용 금지)
+- **응답 본문에 이모지를 절대 사용하지 마십시오.** (예: 📊, 🚀, ✅ 등 사용 금지)
 - **제공되지 않은 외부 뉴스나 사실을 절대 언급하지 마십시오.** (예: 'HBM3E', '설비투자', '수율 개선', 'NVDA 공급' 등 데이터에 명시되지 않은 구체적 경영 뉴스 금지)
 - 오직 제공된 JSON 데이터 내의 수치와 차트의 시각적 요소(x, y축 흐름)에만 집중하십시오.
 - 알 수 없는 데이터(예: P/B 미제공 등)는 임의로 추측하지 말고 언급을 피하십시오.
@@ -41,7 +42,7 @@ class LLMService:
         company_name = analysis_data.get("company_name", symbol)
         data_context = json.dumps(analysis_data, indent=2, ensure_ascii=False)
 
-        logger.info(f"🚀 [LLM] {company_name} ({symbol}) 분석 시작...")
+        logger.info(f"[LLM] {company_name} ({symbol}) 분석 시작...")
         try:
             message = await self.client.messages.create(
                 model="claude-sonnet-4-5",
@@ -56,7 +57,7 @@ class LLMService:
                 ]
             )
             response_text = message.content[0].text
-            logger.info(f"✅ [LLM] 응답 수신 완료 (길이: {len(response_text)})")
+            logger.info(f"[LLM] 응답 수신 완료 (길이: {len(response_text)})")
 
             # JSON 파싱
             try:
@@ -74,7 +75,7 @@ class LLMService:
                     llm_output = json.loads(json_str)
                 except json.JSONDecodeError:
                     # 절단된 JSON 복구 시도: 마지막 완전한 필드까지만 파싱
-                    logger.warning("⚠️ [LLM] JSON 절단 감지, 복구 시도 중...")
+                    logger.warning("[LLM] JSON 절단 감지, 복구 시도 중...")
                     
                     # 마지막 완전한 "key": "value" 쌍 이후로 자르기
                     last_quote = json_str.rfind('"')
@@ -87,13 +88,13 @@ class LLMService:
                             # 마지막 콤마까지 자르고 닫는 중괄호 추가
                             recovered_json = json_str[:last_comma] + '}'
                             llm_output = json.loads(recovered_json)
-                            logger.info("✅ [LLM] 절단된 JSON 복구 성공")
+                            logger.info("[LLM] 절단된 JSON 복구 성공")
                         else:
                             raise  # 복구 불가능, 원래 에러 발생
                     else:
                         raise  # 복구 불가능
 
-                logger.info(f"✨ [LLM] JSON 파싱 및 데이터 구조화 성공")
+                logger.info(f"[LLM] JSON 파싱 및 데이터 구조화 성공")
 
                 # 문자열 필드 정리
                 for key in ['key_thesis', 'primary_risk']:
