@@ -6,6 +6,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from api import deps
 from schemas.analysis import AnalysisCreate, AnalysisOut
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -32,6 +35,7 @@ async def get_analysis(
     """
     분석 상태 조회 API
     """
+    logger.info(f"🔍 [API] {symbol} 분석 결과 조회 요청 수신 (ID: {analysis_id})")
     # 1. 데이터 수집
     td = await collector.fetch_ticker_data(symbol)
     
@@ -84,8 +88,12 @@ async def get_analysis(
         ).first()
         
         if cached_report:
+            logger.info(f"💾 [API] {symbol} 캐시된 보고서 발견! (캐시 데이터 사용)")
             llm_output = cached_report.llm_output
-    except Exception:
+        else:
+            logger.info(f"🆕 [API] {symbol} 캐시 없음. 신규 LLM 분석 진행...")
+    except Exception as e:
+        logger.error(f"⚠️ [API] 캐시 조회 중 오류 (무시하고 진행): {e}")
         pass
 
     # 리스크 지표 계산

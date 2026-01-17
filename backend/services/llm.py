@@ -43,6 +43,9 @@ RESEARCH_REPORT_PROMPT = """
 - **추적 가능한 근거(Evidence)가 없는 모든 분석은 결격 사유입니다. 제공된 데이터가 부족할 경우 '데이터 부재로 인한 분석 제한'임을 명시하세요.** 
 """
 
+import logging
+logger = logging.getLogger(__name__)
+
 class LLMService:
     def __init__(self):
         self.client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
@@ -52,6 +55,7 @@ class LLMService:
         company_name = analysis_data.get("company_name", symbol)
         data_context = json.dumps(analysis_data, indent=2, ensure_ascii=False)
 
+        logger.info(f"🚀 [LLM] {company_name} ({symbol}) 분석 시작...")
         try:
             message = await self.client.messages.create(
                 model="claude-sonnet-4-5",  # Opus → Sonnet으로 변경 (속도 개선)
@@ -65,6 +69,7 @@ class LLMService:
                 ]
             )
             response_text = message.content[0].text
+            logger.info(f"✅ [LLM] 응답 수신 완료 (길이: {len(response_text)})")
 
             
             # JSON 파싱
@@ -79,6 +84,7 @@ class LLMService:
                 
                 # 파싱 및 정리
                 llm_output = json.loads(json_str)
+                logger.info(f"✨ [LLM] JSON 파싱 및 데이터 구조화 성공")
 
                 
                 # 문자열 필드 정리
@@ -127,11 +133,11 @@ class LLMService:
                 return llm_output
                 
             except json.JSONDecodeError as e:
-                print(f"❌ JSON 파싱 에러: {e}")
-                print(f"📄 원본 응답 텍스트: {response_text}")
+                logger.error(f"❌ JSON 파싱 에러: {e}")
+                logger.error(f"📄 원본 응답 텍스트: {response_text}")
             
         except Exception as e:
-            print(f"❌ LLM 호출 중 예외 발생: {type(e).__name__} - {e}")
+            logger.error(f"❌ LLM 호출 중 예외 발생: {type(e).__name__} - {e}")
             import traceback
             traceback.print_exc()
 
