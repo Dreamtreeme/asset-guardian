@@ -638,9 +638,10 @@ def render_valuation(long_data, llm_data):
     
     st.markdown("---")
 
-def render_technical(mid_data, llm_data):
-    st.markdown('<div class="section-title">RSI 분석</div>', unsafe_allow_html=True)
+def render_technical(mid_data, long_data, llm_data):
+    st.markdown('<div class="section-title">기술적 지표 분석 (RSI/이평선)</div>', unsafe_allow_html=True)
     
+    # 1. 상단: RSI 막대와 분석 텍스트
     col1, col2 = st.columns([1, 1.5], gap="large")
     
     with col1:
@@ -670,6 +671,12 @@ def render_technical(mid_data, llm_data):
         </div>
         """, unsafe_allow_html=True)
     
+    # 2. 하단: 이동평균선 차트 (전체 너비)
+    price_history = long_data.get('price_history', {})
+    if price_history:
+        st.markdown("**이동평균선 (장기 추세)**")
+        st.plotly_chart(plot_moving_averages(price_history), width='stretch')
+    
     st.markdown("---")
 
 
@@ -680,9 +687,9 @@ def render_risk_analysis(long_data, llm_data):
     # 차트 2개 좌우 배치
     c1, c2 = st.columns([1, 1], gap="large")
     
+    price_history = long_data.get('price_history', {})
     with c1:
         st.markdown("**낙폭 분석 (Drawdown)**")
-        price_history = long_data.get('price_history', {})
         st.plotly_chart(plot_drawdown_chart(price_history), width='stretch')
     
     with c2:
@@ -697,11 +704,7 @@ def render_risk_analysis(long_data, llm_data):
         col2.metric("VaR 5%", f"{risk_metrics.get('var_5_pct', 0)*100:.2f}%")
         col3.metric("변동성 (연간)", f"{risk_metrics.get('volatility', 0)*100:.1f}%")
     
-    # 장기 이평선
-    st.markdown("**이동평균선 (장기 추세)**")
-    st.plotly_chart(plot_moving_averages(price_history), width='stretch')
-    
-    # LLM 리스크 분석 텍스트 추가
+    # AI 리스크 진단 텍스트
     st.markdown(f"""
     <div class="insight-box risk">
         <h4>AI 리스크 진단</h4>
@@ -740,32 +743,10 @@ def main():
         render_summary(llm_data)
         render_fundamental(res["long_term"], llm_data)
         render_valuation(res["long_term"], llm_data)
-        render_technical(res["mid_term"], llm_data)
+        render_technical(res["mid_term"], res["long_term"], llm_data)
         render_risk_analysis(res["long_term"], llm_data)
         
-        # 전문 리서치 보고서 섹션
-        st.markdown("---")
-        st.markdown('<div class="section-title">전문 리서치 리포트</div>', unsafe_allow_html=True)
-        
-        # 개별 분석 필드를 조합하여 리서치 리포트 구성 (백엔드 중복 전송 제거)
-        report_text = f"""
-### [투자 요약]
-{llm_data.get('executive_summary', '데이터 분석 중...')}
-
-### 1. 펀더멘털 분석
-{llm_data.get('fundamental_analysis', '데이터 분석 중...')}
-
-### 2. 밸류에이션 분석
-{llm_data.get('valuation_analysis', '데이터 분석 중...')}
-
-### 3. 기술적 분석
-{llm_data.get('technical_analysis', '데이터 분석 중...')}
-
-### 4. 리스크 진단
-{llm_data.get('risk_analysis', '데이터 분석 중...')}
-        """.strip()
-        
-        st.markdown(f'<div class="report-container">{report_text}</div>', unsafe_allow_html=True)
+        render_risk_analysis(res["long_term"], llm_data)
     else:
         st.info("왼쪽 사이드바에서 종목 코드를 입력하고 [분석 실행] 버튼을 눌러주세요.")
 
