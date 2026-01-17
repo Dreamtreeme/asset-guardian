@@ -36,6 +36,7 @@ async def get_analysis(
     분석 상태 조회 API
     """
     logger.info(f"🔍 [API] {symbol} 분석 결과 조회 요청 수신 (ID: {analysis_id})")
+    print(f"🔍 [API] {symbol} 요청 수신 확인", flush=True)
     # 1. 데이터 수집
     td = await collector.fetch_ticker_data(symbol)
     
@@ -89,9 +90,11 @@ async def get_analysis(
         
         if cached_report:
             logger.info(f"💾 [API] {symbol} 캐시된 보고서 발견! (캐시 데이터 사용)")
+            print(f"💾 [API] {symbol} 캐시 적중", flush=True)
             llm_output = cached_report.llm_output
         else:
             logger.info(f"🆕 [API] {symbol} 캐시 없음. 신규 LLM 분석 진행...")
+            print(f"🆕 [API] {symbol} LLM 분석 시작", flush=True)
     except Exception as e:
         logger.error(f"⚠️ [API] 캐시 조회 중 오류 (무시하고 진행): {e}")
         pass
