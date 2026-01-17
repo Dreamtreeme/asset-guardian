@@ -1,7 +1,11 @@
 import streamlit as st
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from datetime import datetime
 import requests
+import pandas as pd
+import numpy as np
+import os
 
 # ==============================================================================
 # Page Config & Style
@@ -114,7 +118,6 @@ st.markdown("""
 
 def get_real_time_analysis(symbol):
     """백엔드 API 호출"""
-    import os
     API_URL = os.getenv("BACKEND_URL", "http://localhost:8000/api/v1/analysis")
     try:
         res_post = requests.post(f"{API_URL}/", json={"symbol": symbol}, timeout=10)
@@ -147,6 +150,20 @@ def format_korean_unit(n):
     if n >= 1e4:
         return f"{n/1e4:.1f}만"
     return f"{n:,.0f}"
+
+def apply_common_layout(fig, height=300):
+    """Plotly 차트에 공통 레이아웃 적용"""
+    fig.update_layout(
+        height=height,
+        margin=dict(l=40, r=40, t=40, b=40),
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        font=dict(family="Noto Sans KR", size=12),
+        hovermode="x unified"
+    )
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
+    return fig
 
 # ==============================================================================
 # Chart Functions (라인 차트 + 막대 차트만 사용)
@@ -201,19 +218,9 @@ def plot_financial_trends(fund_data):
         row=2, col=1
     )
     
-    fig.update_layout(
-        height=550, # 높이 약간 증가시켜 여유 확보
-        margin=dict(l=40, r=40, t=80, b=40), # 여백 증가
-        showlegend=False,
-        plot_bgcolor='white',
-        bargap=0.5 # 막대 사이 간격 증가
-    )
-    
-    # 디자인 디테일
-    fig.update_xaxes(type='category', showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', tickformat=',.1f') # T, G 접미사 제거
-    
-    return fig
+    fig.update_layout(height=500, showlegend=False)
+    fig.update_yaxes(tickformat=',.1f', row=1, col=1)
+    return apply_common_layout(fig, height=500)
 
 def plot_placeholder(message):
     """차트 플레이스홀더"""
@@ -296,30 +303,9 @@ def plot_valuation_indicators(peg, roe, current_ratio):
         }
     ), row=1, col=3)
     
-    fig.update_layout(
-        height=220,
-        margin=dict(l=30, r=30, t=60, b=30), # 여백 증가
-        paper_bgcolor='white',
-    )
-    
-    return fig
+    fig.update_layout(height=220)
+    return apply_common_layout(fig, height=220)
 
-def plot_price_chart():
-    """가격 라인 차트 - 백엔드 데이터 연동 필요"""
-    # TODO: 백엔드에서 실제 가격 데이터를 받아와야 함
-    fig = go.Figure()
-    fig.add_annotation(
-        text="가격 데이터 연동 필요",
-        xref="paper", yref="paper",
-        x=0.5, y=0.5, showarrow=False,
-        font=dict(size=16, color="gray")
-    )
-    fig.update_layout(
-        height=320,
-        margin=dict(l=0, r=0, t=10, b=0),
-        plot_bgcolor='white'
-    )
-    return fig
 
 def plot_rsi_bar(rsi_value):
     """RSI 막대 차트"""
@@ -340,21 +326,8 @@ def plot_rsi_bar(rsi_value):
     fig.add_hline(y=70, line_dash="dash", line_color="#DC2626", annotation_text="과매수(70)")
     fig.add_hline(y=30, line_dash="dash", line_color="#059669", annotation_text="과매도(30)")
     
-    fig.update_layout(
-        height=240, # 높이 약간 증가
-        margin=dict(l=20, r=20, t=30, b=20),
-        plot_bgcolor='white',
-        yaxis=dict(
-            range=[0, 100], 
-            title="RSI 지수",
-            tickmode='linear',
-            tick0=0,
-            dtick=20,
-            gridcolor='#F1F5F9'
-        ),
-        showlegend=False
-    )
-    return fig
+    fig.update_layout(height=240, showlegend=False)
+    return apply_common_layout(fig, height=240)
 
 def plot_drawdown_chart(price_history):
     """수중 차트 (Drawdown Analysis)"""
@@ -383,15 +356,8 @@ def plot_drawdown_chart(price_history):
     ))
     
     fig.add_hline(y=0, line_dash="solid", line_color="black", line_width=1)
-    fig.update_layout(
-        yaxis_title="전고점 대비 낙폭 (%)",
-        height=300,
-        margin=dict(l=40, r=40, t=30, b=40), # 여백 증가
-        plot_bgcolor='white',
-        showlegend=False
-    )
-    
-    return fig
+    fig.update_layout(height=300, showlegend=False)
+    return apply_common_layout(fig, height=300)
 
 def plot_return_distribution(price_history):
     """수익률 분포 + VaR"""
@@ -430,27 +396,8 @@ def plot_return_distribution(price_history):
     # 0선 추가
     fig.add_vline(x=0, line_color="#64748B", line_width=1, opacity=0.5)
     
-    fig.update_layout(
-        xaxis_title="일간 수익률 (%)",
-        yaxis_title="빈도 (일수)",
-        height=320,
-        margin=dict(l=50, r=40, t=40, b=50),
-        plot_bgcolor='white',
-        bargap=0.05,
-        xaxis=dict(
-            dtick=1,
-            showgrid=True,
-            gridcolor='#F1F5F9',
-            zeroline=False
-        ),
-        yaxis=dict(
-            showgrid=True,
-            gridcolor='#F1F5F9'
-        ),
-        showlegend=False
-    )
-    
-    return fig
+    fig.update_layout(height=320, bargap=0.05, showlegend=False)
+    return apply_common_layout(fig, height=320)
 
 def plot_moving_averages(price_history):
     """장기 이동평균선 추세 (라인 차트 + 이평선 오버레이)"""
@@ -489,20 +436,8 @@ def plot_moving_averages(price_history):
             line=dict(color='#94A3B8', width=2, dash='dot'),
         ))
     
-    fig.update_layout(
-        yaxis_title="가격 (원)",
-        height=350,
-        margin=dict(l=40, r=40, t=30, b=40),
-        plot_bgcolor='white',
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        yaxis=dict(tickformat=',d')
-    )
-    
-    # 그리드 스타일
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
-    
-    return fig
+    fig.update_layout(height=350, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    return apply_common_layout(fig, height=350)
 
 # ==============================================================================
 # UI Components
@@ -712,10 +647,16 @@ def render_risk_analysis(long_data, llm_data):
     </div>
     """, unsafe_allow_html=True)
 
+def parse_llm_data(res):
+    """백엔드 응답에서 LLM 데이터를 안전하게 파싱"""
+    llm_data = res.get("llm_output") or res.get("report", {})
+    if not isinstance(llm_data, dict):
+        return {}
+    return llm_data
+
 def main():
     st.sidebar.title("주식 분석 시스템")
     
-    # 분석 대상 샘플 종목 (2026년 1월 17일 코스피 시총 TOP 10 기준)
     stocks_samples = {
         "삼성전자 (005930)": "005930",
         "SK하이닉스 (000660)": "000660",
@@ -731,44 +672,33 @@ def main():
     
     selected_stock_name = st.sidebar.selectbox(
         "분석 종목 선택",
-        options=list(stocks_samples.keys()),
-        help="분석할 주요 종목을 선택하세요."
+        options=list(stocks_samples.keys())
     )
     symbol = stocks_samples[selected_stock_name]
     
     if st.sidebar.button("분석 실행", use_container_width=True):
-        with st.spinner(f"{selected_stock_name} 데이터 분석 중..."):
+        with st.spinner(f"{selected_stock_name} 분석 중..."):
             result = get_real_time_analysis(symbol)
             if result:
                 st.session_state.analysis = result
     
     st.sidebar.markdown("---")
-    st.sidebar.info("선택한 종목의 최근 재무, 기술적 지표, 리스크를 AI가 종합 분석합니다.")
+    st.sidebar.info("AI가 최신 재무와 차트를 종합 분석합니다.")
+
     if "analysis" in st.session_state:
         res = st.session_state.analysis
-        
-        
-        # LLM 데이터 파싱
-        llm_data = res.get("llm_output")
-        if llm_data is None:
-            llm_data = res.get("report", {})
-        if not isinstance(llm_data, dict):
-            llm_data = {}
-        
-        company_name = res.get("company_name", res.get("symbol", "Unknown"))
+        llm_data = parse_llm_data(res)
+        company_name = res.get("company_name", symbol)
         current_price = llm_data.get("current_price", res.get("short_term", {}).get("current_price", 0))
-     
         
         render_header(res["symbol"], company_name, current_price)
-        
-        # 탭 제거, 모든 콘텐츠를 한 페이지에 표시
         render_summary(llm_data)
         render_fundamental(res["long_term"], llm_data)
         render_valuation(res["long_term"], llm_data)
         render_technical(res["mid_term"], res["long_term"], llm_data)
         render_risk_analysis(res["long_term"], llm_data)
     else:
-        st.info("왼쪽 사이드바에서 종목 코드를 입력하고 [분석 실행] 버튼을 눌러주세요.")
+        st.info("왼쪽 대시보드에서 종목을 선택하고 분석을 실행해 주세요.")
 
 if __name__ == "__main__":
     main()

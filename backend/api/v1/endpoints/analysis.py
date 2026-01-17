@@ -1,15 +1,23 @@
+import logging
+import numpy as np
+from datetime import datetime, date
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from api import deps
+from schemas.analysis import AnalysisCreate, AnalysisOut
+from models.report_cache import ReportCache
 from services.collector import collector
 from services.engine.finance import analyze_long_term
 from services.engine.technical import analyze_mid_term, analyze_short_term
 from services.llm import llm_service
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from api import deps
-from schemas.analysis import AnalysisCreate, AnalysisOut
-import logging
+from services.preprocessing import (
+    preprocess_financial_data,
+    preprocess_technical_data,
+    preprocess_short_term_data
+)
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter()
 
 @router.post("/", response_model=AnalysisOut)
@@ -36,7 +44,6 @@ async def get_analysis(
     분석 상태 조회 API
     """
     logger.info(f"🔍 [API] {symbol} 분석 결과 조회 요청 수신 (ID: {analysis_id})")
-    print(f"🔍 [API] {symbol} 요청 수신 확인", flush=True)
     # 1. 데이터 수집
     td = await collector.fetch_ticker_data(symbol)
     
@@ -67,17 +74,8 @@ async def get_analysis(
     # 4. LLM 보고서 생성
     company_name = td.info.get("longName") or td.info.get("shortName") or symbol
     
-    # 캐시 또는 LLM 호출
-    from datetime import datetime, date
-    from models.report_cache import ReportCache
-    from services.preprocessing import (
-        preprocess_financial_data,
-        preprocess_technical_data,
-        preprocess_short_term_data
-    )
-    
-    llm_output = None
     today = date.today()
+    llm_output = None
 
     
     # 캐시 확인
@@ -88,19 +86,14 @@ async def get_analysis(
             ReportCache.report_date < datetime.combine(today, datetime.max.time())
         ).first()
         
-        if cached_report:
-            logger.info(f"💾 [API] {symbol} 캐시된 보고서 발견! (캐시 데이터 사용)")
-            print(f"💾 [API] {symbol} 캐시 적중", flush=True)
+            logger.info(f"💾 [API] {symbol} 캐시된 보고서 발견")
             llm_output = cached_report.llm_output
         else:
-            logger.info(f"🆕 [API] {symbol} 캐시 없음. 신규 LLM 분석 진행...")
-            print(f"🆕 [API] {symbol} LLM 분석 시작", flush=True)
+            logger.info(f"🆕 [API] {symbol} 캐시 없음. 신규 분석 진행...")
     except Exception as e:
-        logger.error(f"⚠️ [API] 캐시 조회 중 오류 (무시하고 진행): {e}")
-        pass
+        logger.error(f"⚠️ [API] 캐시 조회 오류 (무시): {e}")
 
-    # 리스크 지표 계산
-    import numpy as np
+    # 리스크 지표 계산 (VaR, 변동성)
     var_5_pct = 0
     volatility = 0
     if hasattr(td, 'px_10y') and not td.px_10y.empty:
@@ -137,15 +130,12 @@ async def get_analysis(
                     llm_output=llm_output
                 ))
                 db.commit()
-                logger.info(f"✅ [API] {symbol} LLM 보고서 캐시 저장 완료")
-                print(f"✅ [API] {symbol} 캐시 저장 성공", flush=True)
+                logger.info(f"✅ [API] {symbol} 보고서 캐시 저장 완료")
             except Exception as save_err:
                 db.rollback()
                 logger.error(f"❌ [API] {symbol} 캐시 저장 실패: {save_err}")
-                print(f"❌ [API] {symbol} 캐시 저장 실패: {save_err}", flush=True)
         else:
-            logger.warning(f"⚠️ [API] {symbol} 분석 결과가 정상이 아니어서 캐시를 저장하지 않습니다.")
-            print(f"⚠️ [API] {symbol} 분석 실패로 캐시 저장 건너뜀", flush=True)
+            logger.warning(f"⚠️ [API] {symbol} 분석 결과 미흡으로 캐시 저장 생략")
     
 
     
