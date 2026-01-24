@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file: .env
+    networks:
+      - asset-analyzer-network
+
+  backend:
+    build: ./backend
+    expose:
+      - "8000"
+    env_file: .env
+    depends_on:
+      - db
+    networks:
+      - asset-analyzer-network
+
+  frontend:
+    build: ./frontend
+    expose:
+      - "8501"
+    entrypoint: [ "streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false" ]
+    env_file: .env
+    environment:
+      - BACKEND_URL=${BACKEND_URL:-http://backend:8000/api/v1/analysis}
+    depends_on:
+      - backend
+    networks:
+      - asset-analyzer-network
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - asset-analyzer-network
+
+volumes:
+  postgres_data:
+
+
+networks:
+  asset-analyzer-network:
+    driver: bridge
